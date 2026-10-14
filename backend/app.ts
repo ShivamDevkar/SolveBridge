@@ -39,10 +39,10 @@ const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     console.error("Unhandled application error:", error);
 
     if(res.headersSent) {
-        return;
+        return next(error);
     }
 
-    res.status(503).json({
+    res.status(500).json({
         success: false,
         message: "Internal server error",
         code: "INTERNAL_ERROR",

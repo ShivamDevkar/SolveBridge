@@ -12,23 +12,33 @@ const server = app.listen(PORT, () => {
 let isShuttingDown = false;
 
 function shutdown() {
-  if(isShuttingDown) return;
+  if (isShuttingDown) return;
   isShuttingDown = true;
 
   console.log("Shutting down the backend server...");
 
+  const forceExit = setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10_000);
+
+  server.closeIdleConnections();
+
   server.close(async (error) => {
     try {
-      await prisma.$disconnect();
-      if(error) {
+      if (error) {
         console.error("Server shutdown failed:", error);
         process.exitCode = 1;
-      } 
-    } catch(disconnectError) {
+      }
+
+      await prisma.$disconnect();
+    } catch (disconnectError) {
       console.error("Prisma disconnect failed:", disconnectError);
       process.exitCode = 1;
+    } finally {
+      clearTimeout(forceExit);
     }
-  })
+  });
 }
 
 process.on("SIGINT", shutdown);
