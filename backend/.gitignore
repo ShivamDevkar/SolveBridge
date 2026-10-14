@@ -28,3 +28,10 @@ dist/
 # virtual environments
 .env
 .env.local
+/generated/prisma
+
+# Local AI-agent tooling
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
