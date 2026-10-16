@@ -7,15 +7,633 @@ generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
 }
-  
+
 datasource db {
   provider = "postgresql"
 }
 
-model HealthCheck {
-  id        String   @id @default(uuid())
-  status    String   @default("ok")
-  createdAt DateTime @default(now())
+// -----------------------------------------------------------------------------
+//  ENUMS
+// -----------------------------------------------------------------------------
 
-  @@map("health_checks")
+enum Role {
+  CUSTOMER
+  PROFESSIONAL
+  ADMIN
+  MODERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DEACTIVATED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum DocumentType {
+  GOVERNMENT_ID
+  ADDRESS_PROOF
+  TRADE_LICENSE
+  CERTIFICATION
+  INSURANCE
+  OTHER
+}
+
+enum VerificationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  MORE_INFO_REQUIRED
+}
+
+enum Urgency {
+  NORMAL
+  SOON
+  URGENT
+}
+
+enum ProblemStatus {
+  OPEN
+  MATCHING
+  PROPOSALS_RECEIVED
+  PROFESSIONAL_SELECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum ProposalStatus {
+  SUBMITTED
+  ACCEPTED
+  NOT_SELECTED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum JobStatus {
+  SCHEDULED
+  ON_THE_WAY
+  ARRIVED
+  INSPECTION
+  IN_PROGRESS
+  COMPLETED
+  CUSTOMER_CONFIRMED
+  CLOSED
+  CANCELLED
+  DISPUTED
+  REASSIGNED
+  REFUNDED
+}
+
+enum QuoteRevisionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  SYSTEM
+  STATUS_UPDATE
+  QUOTE_REVISION
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  AWAITING_EVIDENCE
+  RESOLVED
+  CLOSED
+}
+
+enum DisputeDecision {
+  REFUND_CUSTOMER
+  PAY_PROFESSIONAL
+  PARTIAL_REFUND
+  NO_ACTION
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  RAZORPAY
+  STRIPE
+  MANUAL
+}
+
+enum PaymentKind {
+  CUSTOMER_CHARGE
+  REFUND
+  PROFESSIONAL_PAYOUT
+}
+
+enum NotificationType {
+  PROBLEM_MATCHED
+  NEW_PROPOSAL
+  PROPOSAL_ACCEPTED
+  PROPOSAL_NOT_SELECTED
+  JOB_STATUS_CHANGED
+  QUOTE_REVISION_REQUESTED
+  QUOTE_REVISION_RESPONDED
+  NEW_MESSAGE
+  REVIEW_RECEIVED
+  DISPUTE_UPDATE
+  VERIFICATION_UPDATE
+  SYSTEM
+}
+
+// =============================================================================
+//  GROUP A — IDENTITY, ROLES & VERIFICATION
+// =============================================================================
+
+/// Application identity. `id` equals auth.users.id (FK + ON DELETE CASCADE added in SQL migration).
+model User {
+  id           String     @id @db.Uuid // supplied by Supabase Auth trigger; no default
+  role         Role       @default(CUSTOMER)
+  firstName    String     @db.VarChar(100)
+  lastName     String     @db.VarChar(100)
+  phone        String?    @unique @db.VarChar(20) // E.164
+  profileImage String?
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  deletedAt    DateTime?  @db.Timestamptz(6) // soft delete
+
+  professionalProfile   ProfessionalProfile?
+  problems              Problem[]
+  customerJobs          Job[]                 @relation("JobCustomer")
+  reviewsWritten        Review[]              @relation("ReviewAuthor")
+  messagesSent          Message[]
+  notifications         Notification[]
+  disputesOpened        Dispute[]             @relation("DisputeOpener")
+  disputesResolved      Dispute[]             @relation("DisputeResolver")
+  verificationsReviewed VerificationRequest[] @relation("VerificationReviewer")
+  jobStatusChanges      JobStatusHistory[]
+  evidenceUploaded      DisputeEvidence[]
+  auditLogs             AuditLog[]
+  payments              Payment[]             @relation("PaymentPayer")
+
+  @@index([role, status])
+  @@index([deletedAt])
+}
+
+/// Business profile + cached reputation for a PROFESSIONAL user (1:1 with User).
+model ProfessionalProfile {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String             @unique @db.Uuid
+  businessName       String?            @db.VarChar(200)
+  bio                String?
+  experienceYears    Int                @default(0)
+  serviceRadius      Int                @default(10) // kilometres, CHECK 1..100
+  baseLatitude       Float?             @db.DoublePrecision
+  baseLongitude      Float?             @db.DoublePrecision
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  averageRating      Decimal            @default(0) @db.Decimal(3, 2)
+  totalJobs          Int                @default(0)
+  responseRate       Decimal            @default(0) @db.Decimal(5, 2) // percent
+  createdAt          DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime           @default(now()) @updatedAt @db.Timestamptz(6)
+
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills               ProfessionalSkill[]
+  proposals            Proposal[]
+  jobs                 Job[]
+  quoteRevisions       QuoteRevision[]
+  reviews              Review[]
+  reviewResponses      ReviewResponse[]
+  verificationRequests VerificationRequest[]
+  portfolioItems       PortfolioItem[]
+  availability         Availability[]
+  matchResults         MatchResult[]
+
+  // Declared here so Prisma tracks it; replaced by a partial index in the SQL migration.
+  @@index([baseLatitude, baseLongitude], map: "idx_professional_geo")
+  @@index([verificationStatus])
+  @@index([averageRating(sort: Desc)])
+}
+
+/// Documents submitted for professional verification; decided by staff.
+model VerificationRequest {
+  id             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  professionalId String                    @db.Uuid
+  documentType   DocumentType
+  documentUrl    String // private bucket path; access via signed URL
+  status         VerificationRequestStatus @default(PENDING)
+  adminNotes     String?
+  reviewedById   String?                   @db.Uuid
+  reviewedAt     DateTime?                 @db.Timestamptz(6)
+  createdAt      DateTime                  @default(now()) @db.Timestamptz(6)
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  reviewedBy   User?               @relation("VerificationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([professionalId])
+  @@index([status, createdAt])
+}
+
+// =============================================================================
+//  GROUP B — TAXONOMY & DYNAMIC COMPETENCIES
+// =============================================================================
+
+model ServiceCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(120)
+  slug        String   @unique @db.VarChar(140)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  skills   Skill[]
+  problems Problem[]
+}
+
+model Skill {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId  String   @db.Uuid
+  name        String   @db.VarChar(120)
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  category      ServiceCategory     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  professionals ProfessionalSkill[]
+
+  @@unique([categoryId, name])
+}
+
+/// N:M join between ProfessionalProfile and Skill (composite primary key).
+model ProfessionalSkill {
+  professionalId String @db.Uuid
+  skillId        String @db.Uuid
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  skill        Skill               @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([professionalId, skillId])
+  @@index([skillId])
+}
+
+// =============================================================================
+//  GROUP C — DISCOVERY & COMPETITIVE PROPOSALS
+// =============================================================================
+
+model Problem {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId         String        @db.Uuid
+  categoryId         String        @db.Uuid
+  title              String        @db.VarChar(200)
+  description        String
+  urgency            Urgency       @default(NORMAL)
+  budgetMin          Int? // paise
+  budgetMax          Int? // paise, CHECK >= budgetMin
+  preferredDate      DateTime?     @db.Date // customer-local wall-clock preference
+  preferredTimeStart DateTime?     @db.Time(6) // customer-local wall-clock preference
+  preferredTimeEnd   DateTime?     @db.Time(6) // customer-local wall-clock preference
+  address            String
+  latitude           Float         @db.DoublePrecision
+  longitude          Float         @db.DoublePrecision
+  status             ProblemStatus @default(OPEN)
+  expiresAt          DateTime      @db.Timestamptz(6)
+  createdAt          DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime      @default(now()) @updatedAt @db.Timestamptz(6)
+  deletedAt          DateTime?     @db.Timestamptz(6) // soft delete
+
+  customer     User            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  category     ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images       ProblemImage[]
+  proposals    Proposal[]
+  job          Job? // at most one (Job.problemId is UNIQUE)
+  matchResults MatchResult[]
+
+  // The next three are declared for Prisma's diff engine and replaced by partial indexes in SQL.
+  @@index([status, categoryId, urgency], map: "idx_problem_matching")
+  @@index([latitude, longitude], map: "idx_problem_geo")
+  @@index([expiresAt], map: "idx_problem_expiry_open")
+  @@index([customerId, status])
+}
+
+model ProblemImage {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  problemId String   @db.Uuid
+  imageUrl  String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+}
+
+model Proposal {
+  id                       String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  problemId                String         @db.Uuid
+  professionalId           String         @db.Uuid
+  price                    Int // paise, CHECK > 0
+  estimatedDurationMinutes Int // CHECK > 0
+  proposedVisitTime        DateTime       @db.Timestamptz(6)
+  diagnosis                String
+  includedServices         String[]       @default([])
+  excludedServices         String[]       @default([])
+  notes                    String?
+  validUntil               DateTime       @db.Timestamptz(6)
+  status                   ProposalStatus @default(SUBMITTED)
+  createdAt                DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
+
+  problem      Problem             @relation(fields: [problemId], references: [id], onDelete: Restrict)
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  job          Job? // at most one (Job.proposalId is UNIQUE)
+
+  @@unique([problemId, professionalId]) // one bid per professional per problem
+  @@index([problemId, status], map: "idx_proposal_problem_status")
+  @@index([professionalId, status], map: "idx_proposal_professional_status")
+  @@index([validUntil], map: "idx_proposal_validity_open")
+}
+
+// =============================================================================
+//  GROUP D — CONTRACTED JOB LIFECYCLE ENGINE
+// =============================================================================
+
+model Job {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  problemId           String    @unique @db.Uuid // one job per problem
+  proposalId          String    @unique @db.Uuid // one job per accepted proposal
+  customerId          String    @db.Uuid
+  professionalId      String    @db.Uuid
+  scheduledAt         DateTime  @db.Timestamptz(6)
+  originalAmount      Int // paise, immutable after creation
+  currentAmount       Int // paise, changes only via approved QuoteRevision
+  status              JobStatus @default(SCHEDULED)
+  startedAt           DateTime? @db.Timestamptz(6)
+  completedAt         DateTime? @db.Timestamptz(6)
+  customerConfirmedAt DateTime? @db.Timestamptz(6)
+  closedAt            DateTime? @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  problem      Problem             @relation(fields: [problemId], references: [id], onDelete: Restrict)
+  proposal     Proposal            @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  customer     User                @relation("JobCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+
+  statusHistory  JobStatusHistory[]
+  quoteRevisions QuoteRevision[]
+  messages       Message[]
+  review         Review? // at most one (Review.jobId is UNIQUE)
+  disputes       Dispute[]
+  payments       Payment[]
+
+  @@index([customerId, status], map: "idx_job_customer_status")
+  @@index([professionalId, status], map: "idx_job_professional_status")
+  @@index([scheduledAt])
+  @@index([status, updatedAt])
+}
+
+/// Append-only audit trail of job state transitions (mutation blocked by trigger).
+model JobStatusHistory {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId     String     @db.Uuid
+  oldStatus JobStatus? // NULL for the opening entry
+  newStatus JobStatus
+  changedBy String?    @db.Uuid // NULL = system actor
+  reason    String?
+  createdAt DateTime   @default(now()) @db.Timestamptz(6)
+
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  actor User? @relation(fields: [changedBy], references: [id], onDelete: Restrict)
+
+  @@index([jobId, createdAt(sort: Asc)], map: "idx_jobstatushistory_timeline")
+}
+
+/// Mid-job price amendment requiring customer approval. newTotalAmount = previousAmount + additionalAmount (CHECK).
+model QuoteRevision {
+  id                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId                 String              @db.Uuid
+  professionalId        String              @db.Uuid
+  previousAmount        Int // paise
+  additionalAmount      Int // paise
+  newTotalAmount        Int // paise
+  reason                String
+  supportingEvidenceUrl String?
+  status                QuoteRevisionStatus @default(PENDING)
+  respondedAt           DateTime?           @db.Timestamptz(6)
+  createdAt             DateTime            @default(now()) @db.Timestamptz(6)
+
+  job          Job                 @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+
+  @@index([jobId, createdAt(sort: Desc)])
+  @@index([professionalId])
+}
+
+// =============================================================================
+//  GROUP E — COMMUNICATION, FEEDBACK & GOVERNANCE
+// =============================================================================
+
+model Message {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId         String      @db.Uuid
+  senderId      String?     @db.Uuid // NULL only for SYSTEM messages (CHECK)
+  messageType   MessageType @default(TEXT)
+  messageText   String?
+  attachmentUrl String?
+  isRead        Boolean     @default(false)
+  createdAt     DateTime    @default(now()) @db.Timestamptz(6)
+
+  job    Job   @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  sender User? @relation(fields: [senderId], references: [id], onDelete: Restrict)
+
+  // Keyset (cursor) pagination for chat history and reconnect recovery.
+  @@index([jobId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_message_job_cursor")
+}
+
+model Review {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId                 String   @unique @db.Uuid // strictly one review per job
+  customerId            String   @db.Uuid
+  professionalId        String   @db.Uuid
+  overallRating         Int      @db.SmallInt // CHECK 1..5
+  qualityRating         Int      @db.SmallInt // CHECK 1..5
+  professionalismRating Int      @db.SmallInt // CHECK 1..5
+  timelinessRating      Int      @db.SmallInt // CHECK 1..5
+  valueRating           Int      @db.SmallInt // CHECK 1..5
+  comment               String?
+  createdAt             DateTime @default(now()) @db.Timestamptz(6)
+
+  job          Job                 @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  customer     User                @relation("ReviewAuthor", fields: [customerId], references: [id], onDelete: Restrict)
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  response     ReviewResponse?
+
+  @@index([professionalId, createdAt(sort: Desc)], map: "idx_review_professional_recent")
+}
+
+model Dispute {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId           String           @db.Uuid
+  openedById      String           @db.Uuid
+  reason          String           @db.VarChar(200)
+  description     String
+  status          DisputeStatus    @default(OPEN)
+  adminDecision   DisputeDecision?
+  resolutionNotes String?
+  resolvedById    String?          @db.Uuid
+  resolvedAt      DateTime?        @db.Timestamptz(6)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(6)
+
+  job        Job               @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  openedBy   User              @relation("DisputeOpener", fields: [openedById], references: [id], onDelete: Restrict)
+  resolvedBy User?             @relation("DisputeResolver", fields: [resolvedById], references: [id], onDelete: Restrict)
+  evidence   DisputeEvidence[]
+
+  @@index([jobId])
+  @@index([status, createdAt])
+}
+
+model DisputeEvidence {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  disputeId  String   @db.Uuid
+  uploadedBy String   @db.Uuid
+  fileUrl    String // private bucket path
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  dispute  Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploadedBy], references: [id], onDelete: Restrict)
+
+  @@index([disputeId])
+}
+
+model Notification {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String           @db.Uuid
+  title     String           @db.VarChar(200)
+  message   String
+  type      NotificationType
+  linkUrl   String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+/// Append-only security/compliance journal (mutation blocked by trigger; no client access).
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId    String?  @db.Uuid // NULL = system actor
+  action     String   @db.VarChar(100)
+  entityType String   @db.VarChar(100)
+  entityId   String   @db.Uuid
+  metadata   Json?    @db.JsonB
+  ipAddress  String?  @db.Inet
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, createdAt(sort: Desc)], map: "idx_auditlog_entity")
+  @@index([actorId, createdAt(sort: Desc)])
+}
+
+// Optional but included because the product requirements include portfolios, weekly availability,
+// persisted matching explanations, review replies, and payment/refund tracking.
+model PortfolioItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  professionalId String   @db.Uuid
+  title          String   @db.VarChar(160)
+  description    String?
+  mediaUrl       String
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, sortOrder])
+}
+
+model Availability {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  professionalId String   @db.Uuid
+  dayOfWeek      Int // ISO-8601: Monday=1 ... Sunday=7
+  startTime      DateTime @db.Time(6)
+  endTime        DateTime @db.Time(6)
+  timezone       String   @default("Asia/Kolkata") @db.VarChar(64)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, dayOfWeek, isActive])
+}
+
+model MatchResult {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  problemId      String    @db.Uuid
+  professionalId String    @db.Uuid
+  score          Decimal   @db.Decimal(6, 3)
+  rank           Int?
+  reasons        Json      @default("{}") @db.JsonB
+  notifiedAt     DateTime? @db.Timestamptz(6)
+  computedAt     DateTime  @default(now()) @db.Timestamptz(6)
+
+  problem      Problem             @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@unique([problemId, professionalId])
+  @@index([problemId, score(sort: Desc)])
+  @@index([professionalId, computedAt(sort: Desc)])
+}
+
+model ReviewResponse {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reviewId       String   @unique @db.Uuid
+  professionalId String   @db.Uuid
+  responseText   String
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  review       Review              @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+
+  @@index([professionalId, createdAt(sort: Desc)])
+}
+
+model Payment {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId             String          @db.Uuid
+  payerId           String          @db.Uuid
+  kind              PaymentKind     @default(CUSTOMER_CHARGE)
+  provider          PaymentProvider
+  providerPaymentId String?         @unique @db.VarChar(200)
+  amount            Int // integer paise
+  refundedAmount    Int             @default(0) // integer paise
+  currency          String          @default("INR") @db.VarChar(3)
+  status            PaymentStatus   @default(PENDING)
+  failureCode       String?         @db.VarChar(100)
+  failureMessage    String?
+  metadata          Json?           @db.JsonB
+  createdAt         DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime        @default(now()) @updatedAt @db.Timestamptz(6)
+
+  job   Job  @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  payer User @relation("PaymentPayer", fields: [payerId], references: [id], onDelete: Restrict)
+
+  @@index([jobId, createdAt(sort: Desc)])
+  @@index([payerId, status, createdAt(sort: Desc)])
 }

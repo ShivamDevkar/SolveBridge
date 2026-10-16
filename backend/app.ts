@@ -9,9 +9,7 @@ app.use(express.json());
 
 app.get("/api/v1/health", async (req, res) => {
   try {
-    await prisma.healthCheck.findFirst({
-      select: {id: true},
-    });
+    await prisma.$queryRaw`SELECT 1`;
 
     res.status(200).json({
       success: true,
