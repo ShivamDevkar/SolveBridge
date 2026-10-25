@@ -1,5 +1,4 @@
 import "dotenv/config";
-import e from "express";
 import {z} from "zod";
 
 const envSchema = z.object({
@@ -8,12 +7,10 @@ const envSchema = z.object({
     DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
     DIRECT_URL: z.string().min(1, "DIRECT_URL is required"),
 
-    // SUPABASE_URL:z.url("SUPABASE_URL must be a valid url"),
+    SUPABASE_URL: z.url("SUPABASE_URL must be a valid URL"),
     SUPABASE_PUBLISHABLE_KEY: z.string().min(1, "SUPABASE_PUBLISHABLE_KEY is required"),
-    SUPABASE_SECRET_KEY: z.string().min(1, "SUPABASE_SECRET_KEY is required"),
-    // SUPABASE_JWT_URL: z.url("SUPABASE_JWT_URL must be a valid url"),
 
-    FRONTEND_URL: z.url().default("http://localhost:5173"),
+    FRONTEND_URL: z.url("FRONTEND_URL must be a valid URL").default("http://localhost:5173"),
 });
 
 const result = envSchema.safeParse(process.env);

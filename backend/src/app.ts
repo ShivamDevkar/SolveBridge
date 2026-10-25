@@ -1,10 +1,12 @@
 import express, { ErrorRequestHandler } from "express";
 import cors from "cors";
 import { prisma } from "./config/prisma";
+import env from "./config/env";
+import authRoute from "./routes/auth";
 
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: env.FRONTEND_URL }));
 app.use(express.json());
 
 app.get("/api/v1/health", async (req, res) => {
@@ -27,6 +29,9 @@ app.get("/api/v1/health", async (req, res) => {
     });
   }
 });
+
+app.use("/api/v1/auth", authRoute);
+app.use("/login", authRoute);
 
 app.use((req, res) => {
   res.status(404).json({
