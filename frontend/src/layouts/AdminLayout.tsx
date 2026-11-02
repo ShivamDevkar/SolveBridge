@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
   Users,
@@ -15,7 +16,6 @@ import {
   Wrench,
   Menu,
   X,
-  ExternalLink,
   LogOut,
   Bell,
 } from 'lucide-react';
@@ -24,6 +24,22 @@ import { DropdownMenu } from '@/components/ui/DropdownMenu';
 export function AdminLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/auth/login', { replace: true });
+  };
+
+  const displayName = user?.name || 'System Administrator';
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((n) => n[0].toUpperCase())
+      .join('') || 'AD';
 
   const navItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -41,9 +57,8 @@ export function AdminLayout() {
   ];
 
   const adminMenuItems = [
-    { id: '1', label: 'Admin Security', icon: <Settings className="w-4 h-4" />, onClick: () => alert('Admin Security') },
-    { id: '2', label: 'Customer Portal Preview', icon: <ExternalLink className="w-4 h-4" />, onClick: () => (window.location.href = '/customer/dashboard') },
-    { id: '3', label: 'Sign Out (Demo)', icon: <LogOut className="w-4 h-4" />, variant: 'danger' as const, onClick: () => (window.location.href = '/auth/login') },
+    { id: '1', label: 'Platform Settings', icon: <Settings className="w-4 h-4" />, onClick: () => navigate('/admin/settings') },
+    { id: '2', label: 'Sign Out', icon: <LogOut className="w-4 h-4" />, variant: 'danger' as const, onClick: handleLogout },
   ];
 
   return (
@@ -107,10 +122,10 @@ export function AdminLayout() {
         <div className="p-3 border-t border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-700 text-xs font-bold">
-              AD
+              {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-800 truncate">System Admin</p>
+              <p className="text-xs font-semibold text-slate-800 truncate">{displayName}</p>
               <p className="text-[10px] text-purple-700 font-mono truncate">Governance Role</p>
             </div>
           </div>

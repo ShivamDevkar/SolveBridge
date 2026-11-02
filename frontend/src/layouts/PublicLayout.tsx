@@ -1,11 +1,27 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
-import { Menu, X, ArrowRight, ShieldCheck, Wrench } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Menu, X, ArrowRight, Wrench, ShieldCheck } from 'lucide-react';
 
 export function PublicLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated, role } = useAuth();
+
+  const dashboardPath =
+    role === 'CUSTOMER'
+      ? '/customer/dashboard'
+      : role === 'PROFESSIONAL'
+      ? '/pro/dashboard'
+      : '/admin/dashboard';
+
+  const portalLabel =
+    role === 'CUSTOMER'
+      ? 'Customer Portal'
+      : role === 'PROFESSIONAL'
+      ? 'Pro Workbench'
+      : 'Admin Console';
 
   const navLinks = [
     { label: 'About', path: '/about' },
@@ -54,30 +70,50 @@ export function PublicLayout() {
 
           {/* Desktop Call To Actions */}
           <div className="hidden sm:flex items-center gap-3">
-            <Link to="/auth/register">
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/auth/login">
-              <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                Get Started
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to={dashboardPath}>
+                <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                  {portalLabel}
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/auth/login">
+                  <Button variant="outline" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/auth/register">
+                  <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Navigation Controls */}
           <div className="flex sm:hidden items-center gap-2">
-            <Link to="/auth/register">
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/auth/login">
-              <Button variant="primary" size="sm">
-                Get Started
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to={dashboardPath}>
+                <Button variant="primary" size="sm">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/auth/login">
+                  <Button variant="outline" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/auth/register">
+                  <Button variant="primary" size="sm">
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? 'Close Navigation Menu' : 'Open Navigation Menu'}
@@ -103,16 +139,26 @@ export function PublicLayout() {
                 </Link>
               ))}
               <div className="pt-2 border-t border-slate-200 flex flex-col gap-2">
-                <Link to="/auth/register" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" size="sm" className="w-full">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link to="/auth/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="primary" size="sm" className="w-full">
-                    Get Started
-                  </Button>
-                </Link>
+                {isAuthenticated ? (
+                  <Link to={dashboardPath} onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="primary" size="sm" className="w-full">
+                      Go to {portalLabel}
+                    </Button>
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link to="/auth/register" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="primary" size="sm" className="w-full">
+                        Get Started
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </div>

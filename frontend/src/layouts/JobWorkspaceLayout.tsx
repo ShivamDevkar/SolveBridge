@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useParams, useLocation } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import {
   Wrench,
   CheckCircle2,
@@ -20,7 +21,15 @@ import { Button } from '@/components/ui/Button';
 export function JobWorkspaceLayout() {
   const { jobId = 'JOB-00847' } = useParams();
   const location = useLocation();
+  const { role } = useAuth();
   const [stepperExpanded, setStepperExpanded] = useState(false);
+
+  const backJobsUrl =
+    role === 'PROFESSIONAL'
+      ? '/pro/jobs'
+      : role === 'ADMIN'
+      ? '/admin/jobs'
+      : '/customer/jobs';
 
   // Stepper milestones illustrating the Job Lifecycle
   const steps = [
@@ -50,7 +59,7 @@ export function JobWorkspaceLayout() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {/* Back button and Job Identity */}
           <div className="flex items-center gap-3">
-            <Link to="/customer/jobs">
+            <Link to={backJobsUrl}>
               <Button variant="ghost" size="sm" className="p-2" aria-label="Back to Jobs Directory">
                 <ArrowLeft className="w-4 h-4" />
               </Button>

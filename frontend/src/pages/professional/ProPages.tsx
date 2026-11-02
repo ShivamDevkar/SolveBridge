@@ -1,48 +1,8 @@
 import { PlaceholderPage } from '@/components/common/PlaceholderPage';
 
-export function MatchingProblemsPage() {
-  return (
-    <PlaceholderPage
-      title="Matching Customer Problems Feed"
-      route="/pro/matching-problems"
-      portal="Professional"
-      phase="Phase 05 (Professional Portal)"
-      description="Feed of active customer problem requests filtered by the professional's category, skills, and configured service radius. Highlights explainable match score percentages."
-      backTo={{ label: 'Back to Dashboard', path: '/pro/dashboard' }}
-      highlights={[
-        'Address Privacy Safeguard: Exact street address is masked; only neighborhood and approximate km radius are shown.',
-        'Filterable by distance, urgency level, category, and match score.',
-        'Direct "Draft Proposal" action for each eligible matching request.',
-      ]}
-    />
-  );
-}
-
-export function ProProblemInspectPage() {
-  return (
-    <PlaceholderPage
-      title="Inspect Problem Request & Proposal Builder"
-      route="/pro/matching-problems/:problemId"
-      portal="Professional"
-      phase="Phase 05 (Professional Portal & Proposal Builder)"
-      description="In-depth problem inspection view with symptom descriptions, media attachments, timing preferences, and the structured proposal drafting drawer (estimated price, duration, proposed visit time, initial diagnosis, and inclusions/exclusions)."
-      backTo={{ label: 'Back to Matching Problems', path: '/pro/matching-problems' }}
-    />
-  );
-}
-
-export function MyProposalsPage() {
-  return (
-    <PlaceholderPage
-      title="Submitted Proposals Tracker"
-      route="/pro/proposals"
-      portal="Professional"
-      phase="Phase 05 (Professional Portal)"
-      description="Status tracker of all submitted proposals (Submitted, Viewed by Customer, Accepted, Not Selected, Expired) with edit and withdraw options before customer selection."
-      backTo={{ label: 'Back to Dashboard', path: '/pro/dashboard' }}
-    />
-  );
-}
+export { MatchingProblemsPage } from './MatchingProblemsPage';
+export { ProProblemInspectPage } from './ProProblemInspectPage';
+export { MyProposalsPage } from './MyProposalsPage';
 
 export function ProJobsListPage() {
   return (
@@ -115,18 +75,7 @@ export function ProEarningsPage() {
   );
 }
 
-export function ProProfileEditPage() {
-  return (
-    <PlaceholderPage
-      title="Professional Profile & Coverage Settings"
-      route="/pro/profile"
-      portal="Professional"
-      phase="Phase 05 (Professional Portal - Tier 1 Core MVP)"
-      description="Management of business name, bio, service categories, specific skill tags, base pricing, and service radius slider (km)."
-      backTo={{ label: 'Back to Dashboard', path: '/pro/dashboard' }}
-    />
-  );
-}
+export { ProProfilePage as ProProfileEditPage, ProProfilePage } from './ProProfilePage';
 
 export function ProVerificationPage() {
   return (
@@ -145,15 +94,4 @@ export function ProVerificationPage() {
   );
 }
 
-export function ProSettingsPage() {
-  return (
-    <PlaceholderPage
-      title="Operating Hours & Workbench Preferences"
-      route="/pro/settings"
-      portal="Professional"
-      phase="Phase 05 (Professional Portal - Tier 3)"
-      description="Working hours, automated lead notifications, and matching urgency filters."
-      backTo={{ label: 'Back to Dashboard', path: '/pro/dashboard' }}
-    />
-  );
-}
+export { ProSettingsPage } from './ProSettingsPage';

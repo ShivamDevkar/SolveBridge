@@ -20,12 +20,12 @@ export function ProDashboardPage() {
       posted: '15 mins ago',
     },
     {
-      id: 'PB-00854',
-      title: 'Split AC water leaking inside bedroom wall',
-      category: 'HVAC Service',
+      id: 'PB-00852',
+      title: 'Washing machine front loader not draining water',
+      category: 'HVAC & Appliances',
       urgency: 'SOON' as const,
       matchScore: 89,
-      approxDistance: '3.8 km away (Aundh)',
+      approxDistance: '5.8 km away (Baner)',
       posted: '1 hour ago',
     },
   ];
