@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
+import { useState } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/Button";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -16,26 +16,86 @@ import {
   User,
   LogOut,
   ExternalLink,
-} from 'lucide-react';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
+} from "lucide-react";
+import { DropdownMenu } from "@/components/ui/DropdownMenu";
+import { useAuth } from "@/context/AuthContext";
 
 export function CustomerLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split("@")[0] ||
+    "Customer";
+  const initials = displayName
+    .split(/\s+/)
+    .map((part: string) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (!error) {
+      window.location.href = "/auth/login";
+    }
+  };
 
   const navItems = [
-    { label: 'Overview', path: '/customer/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { label: 'My Problems', path: '/customer/problems', icon: <FileQuestion className="w-4 h-4" /> },
-    { label: 'Active Jobs', path: '/customer/jobs', icon: <Briefcase className="w-4 h-4" /> },
-    { label: 'Messages', path: '/customer/messages', icon: <MessageSquare className="w-4 h-4" /> },
-    { label: 'My Reviews', path: '/customer/reviews', icon: <Star className="w-4 h-4" /> },
-    { label: 'Settings', path: '/customer/settings', icon: <Settings className="w-4 h-4" /> },
+    {
+      label: "Overview",
+      path: "/customer/dashboard",
+      icon: <LayoutDashboard className="w-4 h-4" />,
+    },
+    {
+      label: "My Problems",
+      path: "/customer/problems",
+      icon: <FileQuestion className="w-4 h-4" />,
+    },
+    {
+      label: "Active Jobs",
+      path: "/customer/jobs",
+      icon: <Briefcase className="w-4 h-4" />,
+    },
+    {
+      label: "Messages",
+      path: "/customer/messages",
+      icon: <MessageSquare className="w-4 h-4" />,
+    },
+    {
+      label: "My Reviews",
+      path: "/customer/reviews",
+      icon: <Star className="w-4 h-4" />,
+    },
+    {
+      label: "Settings",
+      path: "/customer/settings",
+      icon: <Settings className="w-4 h-4" />,
+    },
   ];
 
   const profileMenuItems = [
-    { id: '1', label: 'Customer Profile', icon: <User className="w-4 h-4" />, onClick: () => alert('Customer Profile') },
-    { id: '2', label: 'Switch to Pro Portal', icon: <ExternalLink className="w-4 h-4" />, onClick: () => (window.location.href = '/pro/dashboard') },
-    { id: '3', label: 'Sign Out (Demo)', icon: <LogOut className="w-4 h-4" />, variant: 'danger' as const, onClick: () => (window.location.href = '/auth/login') },
+    {
+      id: "1",
+      label: "Customer Profile",
+      icon: <User className="w-4 h-4" />,
+      onClick: () => alert("Customer Profile"),
+    },
+    {
+      id: "2",
+      label: "Switch to Pro Portal",
+      icon: <ExternalLink className="w-4 h-4" />,
+      onClick: () => (window.location.href = "/pro/dashboard"),
+    },
+    {
+      id: "3",
+      label: "Sign Out",
+      icon: <LogOut className="w-4 h-4" />,
+      variant: "danger" as const,
+      onClick: () => void handleSignOut(),
+    },
   ];
 
   return (
@@ -44,11 +104,16 @@ export function CustomerLayout() {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 shrink-0 select-none shadow-xs">
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100">
-          <Link to="/" className="flex items-center gap-2 group focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg p-1">
+          <Link
+            to="/"
+            className="flex items-center gap-2 group focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg p-1"
+          >
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
               <Wrench className="w-4 h-4" />
             </div>
-            <span className="font-bold text-slate-900 text-sm">SolveBid</span>
+            <span className="font-bold text-slate-900 text-sm">
+              SolveBridge
+            </span>
           </Link>
           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">
             Customer
@@ -70,7 +135,10 @@ export function CustomerLayout() {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto" aria-label="Customer Sidebar">
+        <nav
+          className="flex-1 p-3 space-y-1 overflow-y-auto"
+          aria-label="Customer Sidebar"
+        >
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -79,11 +147,11 @@ export function CustomerLayout() {
                 to={item.path}
                 className={`flex items-center gap-3 px-3 py-2 text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700 font-semibold border-l-4 border-blue-600 rounded-r-lg'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg'
+                    ? "bg-blue-50 text-blue-700 font-semibold border-l-4 border-blue-600 rounded-r-lg"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg"
                 }`}
               >
-                <span className={isActive ? 'text-blue-600' : 'text-slate-400'}>
+                <span className={isActive ? "text-blue-600" : "text-slate-400"}>
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
@@ -96,11 +164,15 @@ export function CustomerLayout() {
         <div className="p-3 border-t border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 text-xs font-bold">
-              SC
+              {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-800 truncate">Sarthak Customer</p>
-              <p className="text-[10px] text-slate-500 truncate">Pune, MH</p>
+              <p className="text-xs font-semibold text-slate-800 truncate">
+                {displayName}
+              </p>
+              <p className="text-[10px] text-slate-500 truncate">
+                {user?.email ?? "Customer account"}
+              </p>
             </div>
           </div>
           <DropdownMenu
@@ -114,6 +186,15 @@ export function CustomerLayout() {
             }
             items={profileMenuItems}
           />
+          <button
+            type="button"
+            onClick={() => void handleSignOut()}
+            aria-label="Sign out"
+            title="Sign out"
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </aside>
 
@@ -128,7 +209,11 @@ export function CustomerLayout() {
               className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600"
               aria-label="Toggle navigation menu"
             >
-              {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileSidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </button>
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-600" />
@@ -168,6 +253,14 @@ export function CustomerLayout() {
                 <span>{item.label}</span>
               </Link>
             ))}
+            <button
+              type="button"
+              onClick={() => void handleSignOut()}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </button>
           </div>
         )}
 

@@ -1,34 +1,39 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
-    --canvas: #F8FAFC;
-    --surface-1: #FFFFFF;
-    --surface-2: #F1F5F9;
-    --surface-3: #E2E8F0;
-    --border-subtle: #F1F5F9;
-    --border-default: #E2E8F0;
-    --border-focused: #2563EB;
+    --canvas: #f8fafc;
+    --surface-1: #ffffff;
+    --surface-2: #f1f5f9;
+    --surface-3: #e2e8f0;
+    --border-subtle: #f1f5f9;
+    --border-default: #e2e8f0;
+    --border-focused: #2563eb;
   }
 
   body {
-    background-color: #F8FAFC;
-    color: #0F172A;
-    font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-family: "Poppins", sans-serif;
+  }
+
+  ::selection {
+    background-color: #2563eb;
+    color: #ffffff;
   }
 
   /* Accessible standard focus indicators */
   *:focus-visible {
-    outline: 2px solid #2563EB;
+    outline: 2px solid #2563eb;
     outline-offset: 2px;
   }
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
+  *,
+  ::before,
+  ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -42,12 +47,12 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #94a3b8;
 }

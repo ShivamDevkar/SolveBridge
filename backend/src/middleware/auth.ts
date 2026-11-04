@@ -8,6 +8,7 @@ async function requireAuth(req: Request, res: Response, next:NextFunction) {
         res.status(401).json({
             success: false,
             message: "Authentication required",
+            code: "AUTH_REQUIRED",
         });
 
         return;
@@ -19,6 +20,7 @@ async function requireAuth(req: Request, res: Response, next:NextFunction) {
             res.status(401).json({
                 success: false,
                 message: "Authentication required",
+                code: "AUTH_REQUIRED",
             });
 
             return;
@@ -28,10 +30,13 @@ async function requireAuth(req: Request, res: Response, next:NextFunction) {
 
         res.locals.user = user;
         next();
-    } catch {
+    } catch (error) {
+        console.error("Supabase authentication failed:", error);
+
         res.status(401).json({
             success: false, 
             message: "Invalid or expired access token",
+            code: "AUTH_INVALID",
         });
     }
 }

@@ -30,7 +30,7 @@ app.get("/api/v1/health", async (req, res) => {
   }
 });
 
-app.use("/api/v1/auth", authRoute);
+app.use("/auth", authRoute);
 app.use("/login", authRoute);
 
 app.use((req, res) => {

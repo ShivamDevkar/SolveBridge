@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { PlaceholderPage } from '@/components/common/PlaceholderPage';
+import React, { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import {
   User,
   Briefcase,
@@ -18,154 +25,209 @@ import {
   CheckCircle2,
   ShieldCheck,
   Building2,
-} from 'lucide-react';
+} from "lucide-react";
 
-type AccountType = 'CUSTOMER' | 'PROFESSIONAL';
+type AccountType = "CUSTOMER" | "PROFESSIONAL";
 
 const CITY_OPTIONS = [
-  { value: 'Pune', label: 'Pune, Maharashtra' },
-  { value: 'Mumbai', label: 'Mumbai, Maharashtra' },
-  { value: 'Bengaluru', label: 'Bengaluru, Karnataka' },
-  { value: 'Delhi NCR', label: 'Delhi NCR (Delhi, Gurgaon, Noida)' },
-  { value: 'Hyderabad', label: 'Hyderabad, Telangana' },
-  { value: 'Chennai', label: 'Chennai, Tamil Nadu' },
-  { value: 'Kolkata', label: 'Kolkata, West Bengal' },
-  { value: 'Ahmedabad', label: 'Ahmedabad, Gujarat' },
+  { value: "Pune", label: "Pune, Maharashtra" },
+  { value: "Mumbai", label: "Mumbai, Maharashtra" },
+  { value: "Bengaluru", label: "Bengaluru, Karnataka" },
+  { value: "Delhi NCR", label: "Delhi NCR (Delhi, Gurgaon, Noida)" },
+  { value: "Hyderabad", label: "Hyderabad, Telangana" },
+  { value: "Chennai", label: "Chennai, Tamil Nadu" },
+  { value: "Kolkata", label: "Kolkata, West Bengal" },
+  { value: "Ahmedabad", label: "Ahmedabad, Gujarat" },
 ];
 
 const CATEGORY_OPTIONS = [
-  { value: 'Home Appliances & HVAC', label: 'Home Appliances & HVAC' },
-  { value: 'Plumbing & Water Systems', label: 'Plumbing & Water Systems' },
-  { value: 'Electrical Systems', label: 'Electrical Systems' },
-  { value: 'Vehicle & Roadside Breakdown', label: 'Vehicle & Roadside Breakdown' },
-  { value: 'Tech Hardware & Networking', label: 'Tech Hardware & Networking' },
-  { value: 'Commercial Facility Maintenance', label: 'Commercial Facility Maintenance' },
+  { value: "Home Appliances & HVAC", label: "Home Appliances & HVAC" },
+  { value: "Plumbing & Water Systems", label: "Plumbing & Water Systems" },
+  { value: "Electrical Systems", label: "Electrical Systems" },
+  {
+    value: "Vehicle & Roadside Breakdown",
+    label: "Vehicle & Roadside Breakdown",
+  },
+  { value: "Tech Hardware & Networking", label: "Tech Hardware & Networking" },
+  {
+    value: "Commercial Facility Maintenance",
+    label: "Commercial Facility Maintenance",
+  },
 ];
 
 const RADIUS_OPTIONS = [
-  { value: '5', label: 'Within 5 km (Hyper-local neighborhood)' },
-  { value: '10', label: 'Within 10 km (Standard service area)' },
-  { value: '15', label: 'Within 15 km (Extended coverage)' },
-  { value: '25', label: 'Within 25 km (Greater metropolitan)' },
+  { value: "5", label: "Within 5 km (Hyper-local neighborhood)" },
+  { value: "10", label: "Within 10 km (Standard service area)" },
+  { value: "15", label: "Within 15 km (Extended coverage)" },
+  { value: "25", label: "Within 25 km (Greater metropolitan)" },
 ];
 
 const SKILLS_BY_CATEGORY: Record<string, string[]> = {
-  'Home Appliances & HVAC': [
-    'AC Gas Refill & Cooling',
-    'Condenser Coil Cleaning',
-    'Compressor Diagnostics',
-    'Washing Machine Motor',
-    'Refrigerator Cooling',
+  "Home Appliances & HVAC": [
+    "AC Gas Refill & Cooling",
+    "Condenser Coil Cleaning",
+    "Compressor Diagnostics",
+    "Washing Machine Motor",
+    "Refrigerator Cooling",
   ],
-  'Plumbing & Water Systems': [
-    'P-Trap Leak Repair',
-    'Drain Snaking & Clearing',
-    'Silicone Washer Replacement',
-    'Water Heater Diagnostics',
-    'Bathroom Pipe Fitting',
+  "Plumbing & Water Systems": [
+    "P-Trap Leak Repair",
+    "Drain Snaking & Clearing",
+    "Silicone Washer Replacement",
+    "Water Heater Diagnostics",
+    "Bathroom Pipe Fitting",
   ],
-  'Electrical Systems': [
-    'MCB Breaker Tripping',
-    'Wiring Fault Detection',
-    'Neutral Bonding Inspection',
-    'Earth Resistance Test',
-    'Switchboard Replacement',
+  "Electrical Systems": [
+    "MCB Breaker Tripping",
+    "Wiring Fault Detection",
+    "Neutral Bonding Inspection",
+    "Earth Resistance Test",
+    "Switchboard Replacement",
   ],
-  'Vehicle & Roadside Breakdown': [
-    'Battery Jumpstart Assistance',
-    'Tubeless Puncture Repair',
-    'Brake Fluid Top-Up',
-    'Engine Thermal Check',
-    'Alternator Output Test',
+  "Vehicle & Roadside Breakdown": [
+    "Battery Jumpstart Assistance",
+    "Tubeless Puncture Repair",
+    "Brake Fluid Top-Up",
+    "Engine Thermal Check",
+    "Alternator Output Test",
   ],
-  'Tech Hardware & Networking': [
-    'Laptop Display Replacement',
-    'Home WiFi Mesh Configuration',
-    'Thermal Paste Application',
-    'CCTV Camera Offline Repair',
-    'Router Bandwidth Tuning',
+  "Tech Hardware & Networking": [
+    "Laptop Display Replacement",
+    "Home WiFi Mesh Configuration",
+    "Thermal Paste Application",
+    "CCTV Camera Offline Repair",
+    "Router Bandwidth Tuning",
   ],
-  'Commercial Facility Maintenance': [
-    'Commercial Freezer Overhaul',
-    'Office Lighting & Troffers',
-    'Industrial HVAC Chiller',
-    'Backup Generator Service',
-    'Exhaust Ventilation Fans',
+  "Commercial Facility Maintenance": [
+    "Commercial Freezer Overhaul",
+    "Office Lighting & Troffers",
+    "Industrial HVAC Chiller",
+    "Backup Generator Service",
+    "Exhaust Ventilation Fans",
   ],
 };
 
 export function RegisterPage() {
-  const [accountType, setAccountType] = useState<AccountType>('CUSTOMER');
+  const [accountType, setAccountType] = useState<AccountType>("CUSTOMER");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const {
+    signUpWithPassword,
+    signInWithGoogle,
+    updateUserProfile,
+    syncApplicationProfile,
+    user,
+  } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isGoogleRegistration = searchParams.get("google") === "complete";
+  const googleRole: AccountType =
+    searchParams.get("role") === "PROFESSIONAL" ? "PROFESSIONAL" : "CUSTOMER";
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   // Customer Form State
   const [customerForm, setCustomerForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    city: 'Pune',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    city: "Pune",
   });
 
   // Professional Form State
   const [proForm, setProForm] = useState({
-    businessName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    category: 'Home Appliances & HVAC',
-    skills: ['AC Gas Refill & Cooling', 'Compressor Diagnostics'],
-    customSkill: '',
-    coverageRadius: '10',
+    businessName: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    category: "Home Appliances & HVAC",
+    skills: ["AC Gas Refill & Cooling", "Compressor Diagnostics"],
+    customSkill: "",
+    coverageRadius: "10",
   });
 
   // Validation Error State
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!isGoogleRegistration || !user) {
+      return;
+    }
+
+    const metadata = user.user_metadata ?? {};
+    const fullName =
+      (typeof metadata.full_name === "string" && metadata.full_name) ||
+      (typeof metadata.name === "string" && metadata.name) ||
+      "";
+    const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
+    const firstName =
+      (typeof metadata.first_name === "string" && metadata.first_name) ||
+      nameParts[0] ||
+      "";
+    const lastName =
+      (typeof metadata.last_name === "string" && metadata.last_name) ||
+      nameParts.slice(1).join(" ");
+    const email = user.email ?? "";
+
+    setAccountType(googleRole);
+    setCustomerForm((previous) => ({
+      ...previous,
+      firstName,
+      lastName,
+      email,
+    }));
+    setProForm((previous) => ({
+      ...previous,
+      businessName: fullName || firstName,
+      email,
+    }));
+  }, [googleRole, isGoogleRegistration, user]);
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
   const validatePhone = (phone: string) => {
-    const digits = phone.replace(/\D/g, '');
+    const digits = phone.replace(/\D/g, "");
     return digits.length >= 10;
   };
 
   const validateCustomer = () => {
     const errs: Record<string, string> = {};
     if (!customerForm.firstName.trim()) {
-      errs.firstName = 'First name is required.';
+      errs.firstName = "First name is required.";
     }
     if (!customerForm.lastName.trim()) {
-      errs.lastName = 'Last name is required.';
+      errs.lastName = "Last name is required.";
     }
     if (!customerForm.email.trim()) {
-      errs.email = 'Email address is required.';
+      errs.email = "Email address is required.";
     } else if (!validateEmail(customerForm.email)) {
-      errs.email = 'Please enter a valid email address (e.g. name@example.com).';
+      errs.email =
+        "Please enter a valid email address (e.g. name@example.com).";
     }
     if (!customerForm.phone.trim()) {
-      errs.phone = 'Phone number is required.';
+      errs.phone = "Phone number is required.";
     } else if (!validatePhone(customerForm.phone)) {
-      errs.phone = 'Please enter a valid 10-digit phone number.';
+      errs.phone = "Please enter a valid 10-digit phone number.";
     }
     if (!customerForm.password) {
-      errs.password = 'Password is required.';
+      errs.password = "Password is required.";
     } else if (customerForm.password.length < 8) {
-      errs.password = 'Password must be at least 8 characters long.';
+      errs.password = "Password must be at least 8 characters long.";
     }
     if (!customerForm.confirmPassword) {
-      errs.confirmPassword = 'Please confirm your password.';
+      errs.confirmPassword = "Please confirm your password.";
     } else if (customerForm.password !== customerForm.confirmPassword) {
-      errs.confirmPassword = 'Passwords do not match.';
+      errs.confirmPassword = "Passwords do not match.";
     }
     if (!customerForm.city) {
-      errs.city = 'Please select your preferred service city.';
+      errs.city = "Please select your preferred service city.";
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -174,46 +236,182 @@ export function RegisterPage() {
   const validatePro = () => {
     const errs: Record<string, string> = {};
     if (!proForm.businessName.trim()) {
-      errs.businessName = 'Business or professional name is required.';
+      errs.businessName = "Business or professional name is required.";
     }
     if (!proForm.email.trim()) {
-      errs.email = 'Email address is required.';
+      errs.email = "Email address is required.";
     } else if (!validateEmail(proForm.email)) {
-      errs.email = 'Please enter a valid business email address.';
+      errs.email = "Please enter a valid business email address.";
     }
     if (!proForm.phone.trim()) {
-      errs.phone = 'Contact phone number is required.';
+      errs.phone = "Contact phone number is required.";
     } else if (!validatePhone(proForm.phone)) {
-      errs.phone = 'Please enter a valid 10-digit contact number.';
+      errs.phone = "Please enter a valid 10-digit contact number.";
     }
     if (!proForm.password) {
-      errs.password = 'Password is required.';
+      errs.password = "Password is required.";
     } else if (proForm.password.length < 8) {
-      errs.password = 'Password must be at least 8 characters long.';
+      errs.password = "Password must be at least 8 characters long.";
     }
     if (!proForm.confirmPassword) {
-      errs.confirmPassword = 'Please confirm your password.';
+      errs.confirmPassword = "Please confirm your password.";
     } else if (proForm.password !== proForm.confirmPassword) {
-      errs.confirmPassword = 'Passwords do not match.';
+      errs.confirmPassword = "Passwords do not match.";
     }
     if (!proForm.category) {
-      errs.category = 'Please select a primary service category.';
+      errs.category = "Please select a primary service category.";
     }
     if (proForm.skills.length === 0) {
-      errs.skills = 'Please select or add at least one initial skill.';
+      errs.skills = "Please select or add at least one initial skill.";
     }
     if (!proForm.coverageRadius) {
-      errs.coverageRadius = 'Please select your service coverage radius.';
+      errs.coverageRadius = "Please select your service coverage radius.";
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const isValid = accountType === 'CUSTOMER' ? validateCustomer() : validatePro();
-    if (isValid) {
+    setAuthError(null);
+
+    const isValid =
+      accountType === "CUSTOMER" ? validateCustomer() : validatePro();
+    if (!isValid) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const isCustomer = accountType === "CUSTOMER";
+
+      const email = isCustomer ? customerForm.email : proForm.email;
+      const password = isCustomer ? customerForm.password : proForm.password;
+
+      const profile = isCustomer
+        ? {
+            role: "CUSTOMER",
+            firstName: customerForm.firstName.trim(),
+            lastName: customerForm.lastName.trim(),
+            phone: customerForm.phone.trim(),
+            city: customerForm.city,
+          }
+        : {
+            role: "PROFESSIONAL",
+            firstName: proForm.businessName.trim(),
+            lastName: "Professional",
+            businessName: proForm.businessName.trim(),
+            phone: proForm.phone.trim(),
+            category: proForm.category,
+            skills: proForm.skills,
+            coverageRadius: proForm.coverageRadius,
+          };
+
+      const { error, needEmailConfirmation } = await signUpWithPassword({
+        email,
+        password,
+        profile,
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+
+      if (!needEmailConfirmation) {
+        const { error: syncError } = await syncApplicationProfile(profile);
+        if (syncError) {
+          setAuthError(syncError.message);
+          return;
+        }
+      }
+
+      if (needEmailConfirmation) {
+        setAuthError(
+          "Account created. Please check your email to confirm your account.",
+        );
+      }
+
       setIsSubmitted(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleRegistration = async () => {
+    setAuthError(null);
+    setIsLoading(true);
+
+    const { error } = await signInWithGoogle({
+      flow: "register",
+      role: accountType,
+    });
+
+    if (error) {
+      setAuthError(error.message);
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const phone =
+      accountType === "CUSTOMER" ? customerForm.phone : proForm.phone;
+    const nextErrors: Record<string, string> = {};
+
+    if (!phone.trim()) {
+      nextErrors.phone = "Phone number is required.";
+    } else if (!validatePhone(phone)) {
+      nextErrors.phone = "Please enter a valid 10-digit phone number.";
+    }
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
+    setAuthError(null);
+    setIsLoading(true);
+
+    const profile =
+      accountType === "CUSTOMER"
+        ? {
+            role: "CUSTOMER",
+            firstName: customerForm.firstName.trim(),
+            lastName: customerForm.lastName.trim(),
+            email: customerForm.email,
+            phone: customerForm.phone.trim(),
+            city: customerForm.city,
+          }
+        : {
+            role: "PROFESSIONAL",
+            firstName: customerForm.firstName.trim(),
+            lastName: customerForm.lastName.trim(),
+            businessName: proForm.businessName.trim(),
+            email: proForm.email,
+            phone: proForm.phone.trim(),
+            category: proForm.category,
+            skills: proForm.skills,
+            coverageRadius: proForm.coverageRadius,
+          };
+
+    try {
+      const { error } = await updateUserProfile(profile);
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+
+      const { error: syncError } = await syncApplicationProfile(profile);
+      if (syncError) {
+        setAuthError(syncError.message);
+        return;
+      }
+
+      setIsSubmitted(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -225,7 +423,9 @@ export function RegisterPage() {
   const toggleSkill = (skill: string) => {
     setProForm((prev) => {
       const exists = prev.skills.includes(skill);
-      const updated = exists ? prev.skills.filter((s) => s !== skill) : [...prev.skills, skill];
+      const updated = exists
+        ? prev.skills.filter((s) => s !== skill)
+        : [...prev.skills, skill];
       return { ...prev, skills: updated };
     });
     if (errors.skills) {
@@ -243,7 +443,7 @@ export function RegisterPage() {
       setProForm((prev) => ({
         ...prev,
         skills: [...prev.skills, trimmed],
-        customSkill: '',
+        customSkill: "",
       }));
       if (errors.skills) {
         setErrors((prev) => {
@@ -261,13 +461,21 @@ export function RegisterPage() {
     <Card className="bg-white border-slate-200/90 shadow-elevated">
       <CardHeader>
         <CardTitle className="text-xl sm:text-2xl text-slate-900 font-bold">
-          Create Your SolveBid Account
+          Create Your SolveBridge Account
         </CardTitle>
         <CardDescription className="text-slate-600 text-xs sm:text-sm">
-          Join SolveBid to post problem requests or provide verified professional services.
+          Join SolveBridge to post problem requests or provide verified
+          professional services.
         </CardDescription>
       </CardHeader>
-
+      {authError && (
+        <p
+          role="alert"
+          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
+          {authError}
+        </p>
+      )}
       {isSubmitted ? (
         <CardContent className="space-y-5 py-4">
           <div className="p-6 text-center space-y-4 bg-emerald-50/50 rounded-2xl border border-emerald-200">
@@ -277,10 +485,12 @@ export function RegisterPage() {
 
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-slate-900">
-                {accountType === 'CUSTOMER' ? 'Customer Account Simulated' : 'Professional Registration Received'}
+                {accountType === "CUSTOMER"
+                  ? "Customer Account Simulated"
+                  : "Professional Registration Received"}
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
-                {accountType === 'CUSTOMER'
+                {accountType === "CUSTOMER"
                   ? `Welcome, ${customerForm.firstName}! In this local demo, account creation is simulated without backend persistence. You can now proceed to sign in and explore posting problems and comparing proposals.`
                   : `Thank you for registering ${proForm.businessName}! In this local demo, professional credentials will be evaluated through the administrator review process. You can proceed to sign in and explore incoming leads.`}
               </p>
@@ -293,19 +503,25 @@ export function RegisterPage() {
               <div className="flex justify-between text-slate-600 pt-0.5 border-t border-slate-100">
                 <span>Account Type:</span>
                 <strong className="text-slate-900">
-                  {accountType === 'CUSTOMER' ? 'Customer' : 'Service Professional'}
+                  {accountType === "CUSTOMER"
+                    ? "Customer"
+                    : "Service Professional"}
                 </strong>
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>Email:</span>
                 <strong className="text-slate-900">
-                  {accountType === 'CUSTOMER' ? customerForm.email : proForm.email}
+                  {accountType === "CUSTOMER"
+                    ? customerForm.email
+                    : proForm.email}
                 </strong>
               </div>
-              {accountType === 'CUSTOMER' ? (
+              {accountType === "CUSTOMER" ? (
                 <div className="flex justify-between text-slate-600">
                   <span>Service City:</span>
-                  <strong className="text-slate-900">{customerForm.city}</strong>
+                  <strong className="text-slate-900">
+                    {customerForm.city}
+                  </strong>
                 </div>
               ) : (
                 <div className="flex justify-between text-slate-600">
@@ -336,6 +552,70 @@ export function RegisterPage() {
             </div>
           </div>
         </CardContent>
+      ) : isGoogleRegistration && user ? (
+        <form onSubmit={handleGoogleProfileSubmit} noValidate>
+          <CardContent className="space-y-5">
+            <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-950">
+              <p className="font-semibold">Google account verified</p>
+              <p className="mt-1 text-xs text-blue-800">
+                We received your name and email from Google. Add your phone
+                number to finish creating your account.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="First Name"
+                value={customerForm.firstName}
+                disabled
+              />
+              <Input label="Last Name" value={customerForm.lastName} disabled />
+            </div>
+
+            <Input
+              label="Google Email"
+              type="email"
+              value={
+                accountType === "CUSTOMER" ? customerForm.email : proForm.email
+              }
+              disabled
+            />
+
+            <Input
+              label="Phone Number"
+              type="tel"
+              placeholder="+91 98765 43210"
+              leftIcon={<Phone className="w-4 h-4" />}
+              value={
+                accountType === "CUSTOMER" ? customerForm.phone : proForm.phone
+              }
+              onChange={(e) => {
+                if (accountType === "CUSTOMER") {
+                  setCustomerForm({ ...customerForm, phone: e.target.value });
+                } else {
+                  setProForm({ ...proForm, phone: e.target.value });
+                }
+                if (errors.phone) {
+                  setErrors({ ...errors, phone: "" });
+                }
+              }}
+              error={errors.phone}
+              required
+            />
+          </CardContent>
+
+          <CardFooter className="flex-col gap-3 pt-2">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isLoading}
+              className="w-full bg-blue-600 font-bold text-white hover:bg-blue-700"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              {isLoading ? "Finishing setup..." : "Finish account setup"}
+            </Button>
+          </CardFooter>
+        </form>
       ) : (
         <form onSubmit={handleSubmit} noValidate>
           <CardContent className="space-y-5">
@@ -354,20 +634,20 @@ export function RegisterPage() {
                 <button
                   type="button"
                   role="radio"
-                  aria-checked={accountType === 'CUSTOMER'}
-                  onClick={() => handleAccountTypeChange('CUSTOMER')}
+                  aria-checked={accountType === "CUSTOMER"}
+                  onClick={() => handleAccountTypeChange("CUSTOMER")}
                   className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 ${
-                    accountType === 'CUSTOMER'
-                      ? 'border-2 border-blue-600 bg-blue-50/70 ring-2 ring-blue-500/20 shadow-xs'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70'
+                    accountType === "CUSTOMER"
+                      ? "border-2 border-blue-600 bg-blue-50/70 ring-2 ring-blue-500/20 shadow-xs"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div
                       className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                        accountType === 'CUSTOMER'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-slate-100 text-slate-500'
+                        accountType === "CUSTOMER"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-slate-100 text-slate-500"
                       }`}
                     >
                       <User className="w-4 h-4" />
@@ -376,24 +656,29 @@ export function RegisterPage() {
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <span
                           className={`font-bold text-sm ${
-                            accountType === 'CUSTOMER' ? 'text-blue-900' : 'text-slate-900'
+                            accountType === "CUSTOMER"
+                              ? "text-blue-900"
+                              : "text-slate-900"
                           }`}
                         >
                           Customer
                         </span>
                         <div
                           className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                            accountType === 'CUSTOMER'
-                              ? 'border-blue-600 bg-blue-600 text-white'
-                              : 'border border-slate-300 bg-white'
+                            accountType === "CUSTOMER"
+                              ? "border-blue-600 bg-blue-600 text-white"
+                              : "border border-slate-300 bg-white"
                           }`}
                           aria-hidden="true"
                         >
-                          {accountType === 'CUSTOMER' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                          {accountType === "CUSTOMER" && (
+                            <Check className="w-2.5 h-2.5 stroke-3" />
+                          )}
                         </div>
                       </div>
                       <p className="text-[11px] text-slate-600 leading-snug">
-                        Find professionals, describe problems, and compare proposals.
+                        Find professionals, describe problems, and compare
+                        proposals.
                       </p>
                     </div>
                   </div>
@@ -403,20 +688,20 @@ export function RegisterPage() {
                 <button
                   type="button"
                   role="radio"
-                  aria-checked={accountType === 'PROFESSIONAL'}
-                  onClick={() => handleAccountTypeChange('PROFESSIONAL')}
+                  aria-checked={accountType === "PROFESSIONAL"}
+                  onClick={() => handleAccountTypeChange("PROFESSIONAL")}
                   className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 ${
-                    accountType === 'PROFESSIONAL'
-                      ? 'border-2 border-amber-600 bg-amber-50/70 ring-2 ring-amber-500/20 shadow-xs'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70'
+                    accountType === "PROFESSIONAL"
+                      ? "border-2 border-amber-600 bg-amber-50/70 ring-2 ring-amber-500/20 shadow-xs"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div
                       className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                        accountType === 'PROFESSIONAL'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-slate-100 text-slate-500'
+                        accountType === "PROFESSIONAL"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-slate-100 text-slate-500"
                       }`}
                     >
                       <Briefcase className="w-4 h-4" />
@@ -425,24 +710,29 @@ export function RegisterPage() {
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <span
                           className={`font-bold text-sm ${
-                            accountType === 'PROFESSIONAL' ? 'text-amber-950' : 'text-slate-900'
+                            accountType === "PROFESSIONAL"
+                              ? "text-amber-950"
+                              : "text-slate-900"
                           }`}
                         >
                           Professional
                         </span>
                         <div
                           className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                            accountType === 'PROFESSIONAL'
-                              ? 'border-amber-600 bg-amber-600 text-white'
-                              : 'border border-slate-300 bg-white'
+                            accountType === "PROFESSIONAL"
+                              ? "border-amber-600 bg-amber-600 text-white"
+                              : "border border-slate-300 bg-white"
                           }`}
                           aria-hidden="true"
                         >
-                          {accountType === 'PROFESSIONAL' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                          {accountType === "PROFESSIONAL" && (
+                            <Check className="w-2.5 h-2.5 stroke-3" />
+                          )}
                         </div>
                       </div>
                       <p className="text-[11px] text-slate-600 leading-snug">
-                        Offer services, receive matching leads, and submit proposals.
+                        Offer services, receive matching leads, and submit
+                        proposals.
                       </p>
                     </div>
                   </div>
@@ -451,7 +741,7 @@ export function RegisterPage() {
             </div>
 
             {/* 2. Customer Form Variant */}
-            {accountType === 'CUSTOMER' && (
+            {accountType === "CUSTOMER" && (
               <div className="space-y-3.5 pt-2 border-t border-slate-100">
                 {/* First and Last Name */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -460,8 +750,12 @@ export function RegisterPage() {
                     placeholder="e.g. Sarthak"
                     value={customerForm.firstName}
                     onChange={(e) => {
-                      setCustomerForm({ ...customerForm, firstName: e.target.value });
-                      if (errors.firstName) setErrors({ ...errors, firstName: '' });
+                      setCustomerForm({
+                        ...customerForm,
+                        firstName: e.target.value,
+                      });
+                      if (errors.firstName)
+                        setErrors({ ...errors, firstName: "" });
                     }}
                     error={errors.firstName}
                     required
@@ -471,8 +765,12 @@ export function RegisterPage() {
                     placeholder="e.g. Kulkarni"
                     value={customerForm.lastName}
                     onChange={(e) => {
-                      setCustomerForm({ ...customerForm, lastName: e.target.value });
-                      if (errors.lastName) setErrors({ ...errors, lastName: '' });
+                      setCustomerForm({
+                        ...customerForm,
+                        lastName: e.target.value,
+                      });
+                      if (errors.lastName)
+                        setErrors({ ...errors, lastName: "" });
                     }}
                     error={errors.lastName}
                     required
@@ -488,7 +786,7 @@ export function RegisterPage() {
                   value={customerForm.email}
                   onChange={(e) => {
                     setCustomerForm({ ...customerForm, email: e.target.value });
-                    if (errors.email) setErrors({ ...errors, email: '' });
+                    if (errors.email) setErrors({ ...errors, email: "" });
                   }}
                   error={errors.email}
                   required
@@ -503,8 +801,11 @@ export function RegisterPage() {
                     leftIcon={<Phone className="w-4 h-4" />}
                     value={customerForm.phone}
                     onChange={(e) => {
-                      setCustomerForm({ ...customerForm, phone: e.target.value });
-                      if (errors.phone) setErrors({ ...errors, phone: '' });
+                      setCustomerForm({
+                        ...customerForm,
+                        phone: e.target.value,
+                      });
+                      if (errors.phone) setErrors({ ...errors, phone: "" });
                     }}
                     error={errors.phone}
                     required
@@ -514,8 +815,11 @@ export function RegisterPage() {
                     options={CITY_OPTIONS}
                     value={customerForm.city}
                     onChange={(e) => {
-                      setCustomerForm({ ...customerForm, city: e.target.value });
-                      if (errors.city) setErrors({ ...errors, city: '' });
+                      setCustomerForm({
+                        ...customerForm,
+                        city: e.target.value,
+                      });
+                      if (errors.city) setErrors({ ...errors, city: "" });
                     }}
                     error={errors.city}
                     required
@@ -526,46 +830,70 @@ export function RegisterPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="Password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="At least 8 characters"
                     leftIcon={<Lock className="w-4 h-4" />}
                     rightIcon={
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
                         className="pointer-events-auto text-slate-400 hover:text-slate-600 focus:outline-hidden p-0.5"
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     }
                     value={customerForm.password}
                     onChange={(e) => {
-                      setCustomerForm({ ...customerForm, password: e.target.value });
-                      if (errors.password) setErrors({ ...errors, password: '' });
+                      setCustomerForm({
+                        ...customerForm,
+                        password: e.target.value,
+                      });
+                      if (errors.password)
+                        setErrors({ ...errors, password: "" });
                     }}
                     error={errors.password}
                     required
                   />
                   <Input
                     label="Confirm Password"
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="Repeat password"
                     leftIcon={<Lock className="w-4 h-4" />}
                     rightIcon={
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        aria-label={
+                          showConfirmPassword
+                            ? "Hide password confirmation"
+                            : "Show password confirmation"
+                        }
                         className="pointer-events-auto text-slate-400 hover:text-slate-600 focus:outline-hidden p-0.5"
                       >
-                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     }
                     value={customerForm.confirmPassword}
                     onChange={(e) => {
-                      setCustomerForm({ ...customerForm, confirmPassword: e.target.value });
-                      if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
+                      setCustomerForm({
+                        ...customerForm,
+                        confirmPassword: e.target.value,
+                      });
+                      if (errors.confirmPassword)
+                        setErrors({ ...errors, confirmPassword: "" });
                     }}
                     error={errors.confirmPassword}
                     required
@@ -575,15 +903,19 @@ export function RegisterPage() {
             )}
 
             {/* 3. Professional Form Variant */}
-            {accountType === 'PROFESSIONAL' && (
+            {accountType === "PROFESSIONAL" && (
               <div className="space-y-3.5 pt-2 border-t border-slate-100">
                 {/* Administrator Credential Notice */}
                 <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
                   <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
-                    <span className="font-semibold block">Credential Verification Process</span>
+                    <span className="font-semibold block">
+                      Credential Verification Process
+                    </span>
                     <p className="text-[11px] text-blue-800/90 leading-relaxed">
-                      Professional accounts undergo platform administrator review before receiving verified badges and proposal privileges.
+                      Professional accounts undergo platform administrator
+                      review before receiving verified badges and proposal
+                      privileges.
                     </p>
                   </div>
                 </div>
@@ -596,7 +928,8 @@ export function RegisterPage() {
                   value={proForm.businessName}
                   onChange={(e) => {
                     setProForm({ ...proForm, businessName: e.target.value });
-                    if (errors.businessName) setErrors({ ...errors, businessName: '' });
+                    if (errors.businessName)
+                      setErrors({ ...errors, businessName: "" });
                   }}
                   error={errors.businessName}
                   required
@@ -612,7 +945,7 @@ export function RegisterPage() {
                     value={proForm.email}
                     onChange={(e) => {
                       setProForm({ ...proForm, email: e.target.value });
-                      if (errors.email) setErrors({ ...errors, email: '' });
+                      if (errors.email) setErrors({ ...errors, email: "" });
                     }}
                     error={errors.email}
                     required
@@ -625,7 +958,7 @@ export function RegisterPage() {
                     value={proForm.phone}
                     onChange={(e) => {
                       setProForm({ ...proForm, phone: e.target.value });
-                      if (errors.phone) setErrors({ ...errors, phone: '' });
+                      if (errors.phone) setErrors({ ...errors, phone: "" });
                     }}
                     error={errors.phone}
                     required
@@ -643,9 +976,12 @@ export function RegisterPage() {
                       setProForm({
                         ...proForm,
                         category: newCategory,
-                        skills: SKILLS_BY_CATEGORY[newCategory] ? [SKILLS_BY_CATEGORY[newCategory][0]] : [],
+                        skills: SKILLS_BY_CATEGORY[newCategory]
+                          ? [SKILLS_BY_CATEGORY[newCategory][0]]
+                          : [],
                       });
-                      if (errors.category) setErrors({ ...errors, category: '' });
+                      if (errors.category)
+                        setErrors({ ...errors, category: "" });
                     }}
                     error={errors.category}
                     required
@@ -655,8 +991,12 @@ export function RegisterPage() {
                     options={RADIUS_OPTIONS}
                     value={proForm.coverageRadius}
                     onChange={(e) => {
-                      setProForm({ ...proForm, coverageRadius: e.target.value });
-                      if (errors.coverageRadius) setErrors({ ...errors, coverageRadius: '' });
+                      setProForm({
+                        ...proForm,
+                        coverageRadius: e.target.value,
+                      });
+                      if (errors.coverageRadius)
+                        setErrors({ ...errors, coverageRadius: "" });
                     }}
                     error={errors.coverageRadius}
                     required
@@ -667,9 +1007,12 @@ export function RegisterPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-700 tracking-wide">
-                      Initial Skills & Services <span className="text-red-500">*</span>
+                      Initial Skills & Services{" "}
+                      <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[10px] text-slate-400">Click to add/remove</span>
+                    <span className="text-[10px] text-slate-400">
+                      Click to add/remove
+                    </span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
@@ -682,8 +1025,8 @@ export function RegisterPage() {
                           onClick={() => toggleSkill(skill)}
                           className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                             isSelected
-                              ? 'bg-amber-100 text-amber-900 border-amber-300 font-semibold shadow-2xs'
-                              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                              ? "bg-amber-100 text-amber-900 border-amber-300 font-semibold shadow-2xs"
+                              : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                           }`}
                         >
                           {isSelected ? `✓ ${skill}` : `+ ${skill}`}
@@ -698,9 +1041,11 @@ export function RegisterPage() {
                       type="text"
                       placeholder="Add another specific skill..."
                       value={proForm.customSkill}
-                      onChange={(e) => setProForm({ ...proForm, customSkill: e.target.value })}
+                      onChange={(e) =>
+                        setProForm({ ...proForm, customSkill: e.target.value })
+                      }
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           e.preventDefault();
                           handleAddCustomSkill();
                         }
@@ -727,46 +1072,67 @@ export function RegisterPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="Password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="At least 8 characters"
                     leftIcon={<Lock className="w-4 h-4" />}
                     rightIcon={
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
                         className="pointer-events-auto text-slate-400 hover:text-slate-600 focus:outline-hidden p-0.5"
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     }
                     value={proForm.password}
                     onChange={(e) => {
                       setProForm({ ...proForm, password: e.target.value });
-                      if (errors.password) setErrors({ ...errors, password: '' });
+                      if (errors.password)
+                        setErrors({ ...errors, password: "" });
                     }}
                     error={errors.password}
                     required
                   />
                   <Input
                     label="Confirm Password"
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="Repeat password"
                     leftIcon={<Lock className="w-4 h-4" />}
                     rightIcon={
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        aria-label={
+                          showConfirmPassword
+                            ? "Hide password confirmation"
+                            : "Show password confirmation"
+                        }
                         className="pointer-events-auto text-slate-400 hover:text-slate-600 focus:outline-hidden p-0.5"
                       >
-                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     }
                     value={proForm.confirmPassword}
                     onChange={(e) => {
-                      setProForm({ ...proForm, confirmPassword: e.target.value });
-                      if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
+                      setProForm({
+                        ...proForm,
+                        confirmPassword: e.target.value,
+                      });
+                      if (errors.confirmPassword)
+                        setErrors({ ...errors, confirmPassword: "" });
                     }}
                     error={errors.confirmPassword}
                     required
@@ -777,23 +1143,41 @@ export function RegisterPage() {
           </CardContent>
 
           <CardFooter className="flex-col gap-3 pt-2">
+            <Button
+              type="button"
+              size="lg"
+              disabled={isLoading}
+              onClick={() => void handleGoogleRegistration()}
+              className="w-full border border-slate-300 bg-white font-bold text-slate-800 hover:bg-slate-50"
+            >
+              Continue with Google
+            </Button>
+
             {/* Primary Submit Button */}
             <Button
               type="submit"
               size="lg"
+              disabled={isLoading}
               className={`w-full font-bold shadow-sm transition-all ${
-                accountType === 'CUSTOMER'
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'bg-amber-600 hover:bg-amber-700 text-white'
+                accountType === "CUSTOMER"
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "bg-amber-600 hover:bg-amber-700 text-white"
               }`}
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              {accountType === 'CUSTOMER' ? 'Create Customer Account' : 'Create Professional Account'}
+              {isLoading
+                ? "Creating account..."
+                : accountType === "CUSTOMER"
+                  ? "Create Customer Account"
+                  : "Create Professional Account"}
             </Button>
 
             <p className="text-xs text-slate-500 text-center">
-              Already have an account?{' '}
-              <Link to="/auth/login" className="text-blue-600 hover:underline font-semibold">
+              Already have an account?{" "}
+              <Link
+                to="/auth/login"
+                className="text-blue-600 hover:underline font-semibold"
+              >
                 Sign In
               </Link>
             </p>
@@ -805,27 +1189,185 @@ export function RegisterPage() {
 }
 
 export function ForgotPasswordPage() {
+  const { resetPasswordForEmail } = useAuth();
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setMessage(null);
+
+    if (!email.trim() || !validateEmailAddress(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+
+    setIsLoading(true);
+    const { error: resetError } = await resetPasswordForEmail(email);
+    setIsLoading(false);
+
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+
+    setMessage(
+      "If an account exists for this email, a reset link has been sent.",
+    );
+  };
+
   return (
-    <PlaceholderPage
-      title="Reset Your Password"
-      route="/auth/forgot-password"
-      portal="Authentication"
-      phase="Phase 02 (Authentication - Tier 2)"
-      description="Self-service password recovery flow sending a simulated password reset email token."
-      backTo={{ label: 'Back to Sign In', path: '/auth/login' }}
-    />
+    <Card className="bg-white border-slate-200/90 shadow-elevated">
+      <CardHeader>
+        <CardTitle className="text-xl text-slate-900 font-bold">
+          Reset Your Password
+        </CardTitle>
+        <CardDescription className="text-sm text-slate-600">
+          Enter your email and we will send a secure password reset link.
+        </CardDescription>
+      </CardHeader>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-4">
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
+          )}
+          {message && (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {message}
+            </p>
+          )}
+          <Input
+            label="Email Address"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            leftIcon={<Mail className="w-4 h-4" />}
+            required
+          />
+        </CardContent>
+        <CardFooter className="flex-col gap-3">
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? "Sending link..." : "Send reset link"}
+          </Button>
+          <Link
+            to="/auth/login"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Return to sign in
+          </Link>
+        </CardFooter>
+      </form>
+    </Card>
   );
 }
 
 export function ResetPasswordPage() {
+  const { updatePassword } = useAuth();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdated, setIsUpdated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setIsLoading(true);
+    const { error: updateError } = await updatePassword(password);
+    setIsLoading(false);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setIsUpdated(true);
+  };
+
   return (
-    <PlaceholderPage
-      title="Set New Password"
-      route="/auth/reset-password"
-      portal="Authentication"
-      phase="Phase 02 (Authentication - Tier 2)"
-      description="Password reset submission form with validation for length and complexity."
-      backTo={{ label: 'Back to Sign In', path: '/auth/login' }}
-    />
+    <Card className="bg-white border-slate-200/90 shadow-elevated">
+      <CardHeader>
+        <CardTitle className="text-xl text-slate-900 font-bold">
+          Set New Password
+        </CardTitle>
+        <CardDescription className="text-sm text-slate-600">
+          Choose a new password for your SolveBridge account.
+        </CardDescription>
+      </CardHeader>
+      {isUpdated ? (
+        <CardContent className="space-y-4">
+          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            Your password has been updated successfully.
+          </p>
+          <Link
+            to="/auth/login"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Continue to sign in
+          </Link>
+        </CardContent>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            {error && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </p>
+            )}
+            <Input
+              label="New Password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              leftIcon={<Lock className="w-4 h-4" />}
+              required
+            />
+            <Input
+              label="Confirm New Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              leftIcon={<Lock className="w-4 h-4" />}
+              required
+            />
+          </CardContent>
+          <CardFooter>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? "Updating password..." : "Update password"}
+            </Button>
+          </CardFooter>
+        </form>
+      )}
+    </Card>
   );
+}
+
+function validateEmailAddress(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
