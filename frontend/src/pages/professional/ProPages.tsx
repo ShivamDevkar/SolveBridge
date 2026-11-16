@@ -3,34 +3,8 @@ import { PlaceholderPage } from '@/components/common/PlaceholderPage';
 export { MatchingProblemsPage } from './MatchingProblemsPage';
 export { ProProblemInspectPage } from './ProProblemInspectPage';
 export { MyProposalsPage } from './MyProposalsPage';
-
-export function ProJobsListPage() {
-  return (
-    <PlaceholderPage
-      title="Professional Active Jobs & Assignments"
-      route="/pro/jobs"
-      portal="Professional"
-      phase="Phase 06 (Shared Job Workspace)"
-      description="Directory of accepted jobs where the professional has been selected. Clicking an active job opens the dedicated Shared Job Workspace with exact address access."
-      backTo={{ label: 'Back to Dashboard', path: '/pro/dashboard' }}
-      actionButton={{ label: 'Open Sample Job #JOB-00847', linkTo: '/jobs/JOB-00847' }}
-    />
-  );
-}
-
-export function ProMessagesPage() {
-  return (
-    <PlaceholderPage
-      title="Professional Messages Inbox"
-      route="/pro/messages"
-      portal="Professional"
-      phase="Phase 06 (Shared Job Workspace & Messaging)"
-      description="Centralized index of all active customer chat conversations across assigned jobs. Selecting any thread routes into the real-time chat within the respective Job Workspace."
-      backTo={{ label: 'Back to Dashboard', path: '/pro/dashboard' }}
-      actionButton={{ label: 'Open Chat for Job #JOB-00847', linkTo: '/jobs/JOB-00847/chat' }}
-    />
-  );
-}
+export { ProJobsListPage } from './ProJobsListPage';
+export { ProMessagesPage } from './ProMessagesPage';
 
 export function ProReviewsPage() {
   return (

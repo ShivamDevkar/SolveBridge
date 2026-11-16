@@ -213,6 +213,26 @@ export const SEED_PROPOSALS: Proposal[] = [
 
 export const SEED_JOBS: Job[] = [
   {
+    id: 'JOB-00847',
+    problemId: 'PB-00847',
+    proposalId: 'PROP-00847-1',
+    customerId: 'user-demo-customer',
+    customerName: 'Sarthak Chavan',
+    professionalId: 'user-demo-pro',
+    professionalName: 'Arun HVAC Services (Arun Kumar)',
+    category: 'Home Appliances & HVAC',
+    title: 'AC turns on but room is not cooling',
+    scheduledAt: 'Today, 4:30 PM',
+    status: 'IN_PROGRESS',
+    originalAmount: 900,
+    currentAmount: 900,
+    exactServiceAddress: 'Flat 402, Mayur Heights, Near Karve Statue, Kothrud, Pune 411038',
+    durationEstimate: '1–2 hours',
+    scheduleNotes: 'Agreed diagnostic visit. Capacitor check & manifold gauge test.',
+    startedAt: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+  },
+  {
     id: 'JOB-00831',
     problemId: 'PB-00831',
     proposalId: 'PROP-00831-1',
@@ -227,7 +247,30 @@ export const SEED_JOBS: Job[] = [
     originalAmount: 1200,
     currentAmount: 1200,
     exactServiceAddress: 'Apt 104, Phoenix Nest, Near Symbiosis Campus, Viman Nagar, Pune 411014',
+    durationEstimate: '2 hours',
+    scheduleNotes: 'Evening slot confirmed. Customer requests call 15 mins prior to arrival.',
     createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'JOB-00790',
+    problemId: 'PB-00790',
+    proposalId: 'PROP-00790-1',
+    customerId: 'user-demo-customer',
+    customerName: 'Sarthak Chavan',
+    professionalId: 'pro-quickchill',
+    professionalName: 'QuickChill Solutions (Suresh Nair)',
+    category: 'Plumbing & Water Systems',
+    title: 'Bathroom concealed pipe leakage under sink',
+    scheduledAt: '2026-10-25, 11:00 AM',
+    status: 'CUSTOMER_CONFIRMED',
+    originalAmount: 650,
+    currentAmount: 650,
+    exactServiceAddress: 'B-601, Harmony Park, Near D-Mart, Aundh, Pune 411007',
+    durationEstimate: '1 hour',
+    startedAt: '2026-10-25T11:15:00Z',
+    completedAt: '2026-10-25T12:45:00Z',
+    customerConfirmedAt: '2026-10-25T13:10:00Z',
+    createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(),
   },
 ];
 
@@ -494,6 +537,11 @@ class MockProposalAdapter implements IProposalService {
     this.inMemoryJobs.set(jobId, newJob);
     this.syncStorage();
 
+    const jobAdapter = typeof globalThis !== 'undefined' ? (globalThis as any).__solvebid_job_adapter : null;
+    if (jobAdapter && typeof jobAdapter.setJob === 'function') {
+      jobAdapter.setJob(newJob);
+    }
+
     const acceptedResult = this.inMemoryProposals.get(cleanProposalId)!;
 
     return {
@@ -515,6 +563,27 @@ class MockProposalAdapter implements IProposalService {
     const cleanId = jobId.trim().toUpperCase();
     const found = this.inMemoryJobs.get(cleanId);
     return found ? { ...found } : null;
+  }
+
+  async updateProposalQuote(
+    proposalId: string,
+    updates: {
+      estimatedPrice: number;
+      estimatedDuration?: string;
+      includedServices?: string[];
+      excludedServices?: string[];
+    }
+  ): Promise<Proposal | null> {
+    await delay();
+    const cleanId = proposalId.trim().toUpperCase();
+    const found = this.inMemoryProposals.get(cleanId);
+    if (!found) return null;
+    found.estimatedPrice = updates.estimatedPrice;
+    if (updates.estimatedDuration) found.estimatedDuration = updates.estimatedDuration;
+    if (updates.includedServices) found.includedServices = updates.includedServices;
+    if (updates.excludedServices) found.excludedServices = updates.excludedServices;
+    this.syncStorage();
+    return { ...found };
   }
 }
 

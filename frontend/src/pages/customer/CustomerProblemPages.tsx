@@ -4,34 +4,8 @@ export { CreateProblemWizardPage as CreateProblemPage, CreateProblemWizardPage }
 export { CustomerProblemsListPage } from './CustomerProblemsListPage';
 export { CustomerProblemDetailPage } from './CustomerProblemDetailPage';
 export { ProposalComparisonPage } from './ProposalComparisonPage';
-
-export function CustomerJobsListPage() {
-  return (
-    <PlaceholderPage
-      title="Accepted Jobs Directory"
-      route="/customer/jobs"
-      portal="Customer"
-      phase="Phase 06 (Shared Job Workspace)"
-      description="List of all accepted active jobs and completed job history. Clicking any active job navigates into the dedicated Shared Job Workspace."
-      backTo={{ label: 'Back to Dashboard', path: '/customer/dashboard' }}
-      actionButton={{ label: 'Open Sample Job #JOB-00847', linkTo: '/jobs/JOB-00847' }}
-    />
-  );
-}
-
-export function CustomerMessagesPage() {
-  return (
-    <PlaceholderPage
-      title="Customer Messages Inbox"
-      route="/customer/messages"
-      portal="Customer"
-      phase="Phase 06 (Shared Job Workspace & Messaging)"
-      description="Centralized conversation index listing active communication threads across assigned jobs. Selecting a conversation thread routes into the real-time chat within the respective Job Workspace."
-      backTo={{ label: 'Back to Dashboard', path: '/customer/dashboard' }}
-      actionButton={{ label: 'Open Chat for Job #JOB-00847', linkTo: '/jobs/JOB-00847/chat' }}
-    />
-  );
-}
+export { CustomerJobsListPage } from './CustomerJobsListPage';
+export { CustomerMessagesPage } from './CustomerMessagesPage';
 
 export function CustomerReviewsPage() {
   return (

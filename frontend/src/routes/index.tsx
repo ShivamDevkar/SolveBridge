@@ -167,6 +167,25 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <JobWorkspaceOverviewPage /> },
+      { path: 'overview', element: <JobWorkspaceOverviewPage /> },
+      { path: 'chat', element: <JobWorkspaceChatPage /> },
+      { path: 'quote-revision', element: <QuoteRevisionPage /> },
+      { path: 'completion', element: <JobCompletionPage /> },
+      { path: 'review', element: <JobReviewPage /> },
+      { path: 'dispute', element: <JobDisputePage /> },
+    ],
+  },
+  // Singular /job/:jobId route alias
+  {
+    path: '/job/:jobId',
+    element: (
+      <ProtectedRoute allowedRoles={['CUSTOMER', 'PROFESSIONAL', 'ADMIN']}>
+        <JobWorkspaceLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <JobWorkspaceOverviewPage /> },
+      { path: 'overview', element: <JobWorkspaceOverviewPage /> },
       { path: 'chat', element: <JobWorkspaceChatPage /> },
       { path: 'quote-revision', element: <QuoteRevisionPage /> },
       { path: 'completion', element: <JobCompletionPage /> },
@@ -189,6 +208,8 @@ export const router = createBrowserRouter([
       { path: 'professionals', element: <AdminProfessionalsListPage /> },
       { path: 'verification', element: <AdminVerificationQueuePage /> },
       { path: 'verification/:proId', element: <AdminVerificationDetailPage /> },
+      { path: 'verifications', element: <Navigate to="/admin/verification" replace /> },
+      { path: 'verifications/:proId', element: <AdminVerificationDetailPage /> },
       { path: 'problems', element: <AdminProblemsListPage /> },
       { path: 'jobs', element: <AdminJobsListPage /> },
       { path: 'disputes', element: <AdminDisputesListPage /> },

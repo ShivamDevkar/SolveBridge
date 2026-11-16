@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { mockProblemAdapter } from '@/services/mockProblemAdapter';
 import { mockProposalAdapter } from '@/services/mockProposalAdapter';
+import { mockQuoteRevisionAdapter } from '@/services/mockQuoteRevisionAdapter';
 import { useAuth } from '@/context/AuthContext';
 import type { Problem } from '@/types/problem';
 import type { Proposal, MatchScoreBreakdown } from '@/types/proposal';
 import type { Job } from '@/types/job';
+import type { QuoteRevision } from '@/types/quoteRevision';
 import {
   ArrowLeft,
   ArrowRight,
@@ -29,6 +31,9 @@ import {
   Calendar,
   ChevronRight,
   UserCheck,
+  FileEdit,
+  TrendingDown,
+  Check,
 } from 'lucide-react';
 
 export function ProposalComparisonPage() {
@@ -54,21 +59,54 @@ export function ProposalComparisonPage() {
   const [isSubmittingSelection, setIsSubmittingSelection] = useState(false);
   const [selectionSuccessJob, setSelectionSuccessJob] = useState<Job | null>(null);
 
+  // Quote Revision state
+  const [revisions, setRevisions] = useState<QuoteRevision[]>([]);
+  const [revisionTargetProposal, setRevisionTargetProposal] = useState<Proposal | null>(null);
+  const [revisionStep, setRevisionStep] = useState<1 | 2>(1); // 1 = Input, 2 = Review screen
+  const [requestedChanges, setRequestedChanges] = useState('');
+  const [affectedScope, setAffectedScope] = useState('');
+  const [desiredBudget, setDesiredBudget] = useState<number | ''>('');
+  const [desiredDuration, setDesiredDuration] = useState('');
+  const [isSubmittingRevision, setIsSubmittingRevision] = useState(false);
+  const [revisionError, setRevisionError] = useState<string | null>(null);
+
+  // Compare Revised Quote Modal state
+  const [activeCompareRevision, setActiveCompareRevision] = useState<QuoteRevision | null>(null);
+  const [isAcceptingRevision, setIsAcceptingRevision] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [isDecliningRevision, setIsDecliningRevision] = useState(false);
+  const [showDeclineInput, setShowDeclineInput] = useState(false);
+
+  // Revision History Modal state
+  const [historyModalRevision, setHistoryModalRevision] = useState<QuoteRevision | null>(null);
+
+  const loadRevisions = async () => {
+    if (!problemId) return;
+    try {
+      const revs = await mockQuoteRevisionAdapter.getRevisionsForProblem(problemId);
+      setRevisions(revs);
+    } catch (err) {
+      console.warn('Could not load quote revisions:', err);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
       if (!problemId) return;
       try {
-        const [prob, propsList, jobsList] = await Promise.all([
+        const [prob, propsList, jobsList, revsList] = await Promise.all([
           mockProblemAdapter.getProblemById(problemId),
           mockProposalAdapter.getProposalsForProblem(problemId),
           mockProposalAdapter.getJobs(),
+          mockQuoteRevisionAdapter.getRevisionsForProblem(problemId),
         ]);
 
         if (isMounted) {
           setProblem(prob);
           setProposals(propsList);
+          setRevisions(revsList);
           const foundJob = jobsList.find((j) => j.problemId.toUpperCase() === problemId.toUpperCase());
           if (foundJob) {
             setAssociatedJob(foundJob);
@@ -121,6 +159,105 @@ export function ProposalComparisonPage() {
       console.error('Failed to select professional:', err);
     } finally {
       setIsSubmittingSelection(false);
+    }
+  };
+
+  const handleOpenRevisionModal = (prop: Proposal) => {
+    setRevisionTargetProposal(prop);
+    setRevisionStep(1);
+    setRequestedChanges('');
+    setAffectedScope('');
+    setDesiredBudget('');
+    setDesiredDuration('');
+    setRevisionError(null);
+  };
+
+  const handleNextToRevisionReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestedChanges.trim() || requestedChanges.trim().length < 10) {
+      setRevisionError('Please describe requested changes in detail (at least 10 characters).');
+      return;
+    }
+    setRevisionError(null);
+    setRevisionStep(2);
+  };
+
+  const handleSubmitRevisionRequest = async () => {
+    if (!revisionTargetProposal || !problemId) return;
+    setIsSubmittingRevision(true);
+    setRevisionError(null);
+    try {
+      await mockQuoteRevisionAdapter.requestQuoteRevision(
+        {
+          proposalId: revisionTargetProposal.id,
+          problemId,
+          requestedChanges: requestedChanges.trim(),
+          affectedScopeItems: affectedScope
+            ? affectedScope.split(',').map((s) => s.trim()).filter(Boolean)
+            : undefined,
+          desiredBudget: desiredBudget ? Number(desiredBudget) : undefined,
+          desiredDuration: desiredDuration.trim() || undefined,
+        },
+        {
+          id: user?.id || 'user-demo-customer',
+          name: user?.name || 'Sarthak Chavan',
+        }
+      );
+      await loadRevisions();
+      setRevisionTargetProposal(null);
+    } catch (err: any) {
+      setRevisionError(err?.message || 'Failed to submit quote revision request.');
+    } finally {
+      setIsSubmittingRevision(false);
+    }
+  };
+
+  const handleAcceptRevisedQuoteAndHire = async (rev: QuoteRevision) => {
+    if (!problemId) return;
+    setIsAcceptingRevision(true);
+    try {
+      const customer = {
+        id: user?.id || 'user-demo-customer',
+        name: user?.name || 'Customer User',
+      };
+      await mockQuoteRevisionAdapter.acceptRevisedQuote(rev.id, customer);
+      const result = await mockProposalAdapter.selectProposal(
+        problemId,
+        rev.proposalId,
+        customer
+      );
+      setProposals(result.allProblemProposals);
+      setAssociatedJob(result.job);
+      setSelectionSuccessJob(result.job);
+
+      const updatedProb = await mockProblemAdapter.getProblemById(problemId);
+      if (updatedProb) setProblem(updatedProb);
+
+      await loadRevisions();
+      setActiveCompareRevision(null);
+    } catch (err: any) {
+      console.error('Failed to accept revised quote:', err);
+    } finally {
+      setIsAcceptingRevision(false);
+    }
+  };
+
+  const handleDeclineRevisedQuote = async (rev: QuoteRevision) => {
+    setIsDecliningRevision(true);
+    try {
+      const customer = {
+        id: user?.id || 'user-demo-customer',
+        name: user?.name || 'Customer User',
+      };
+      await mockQuoteRevisionAdapter.declineRevisedQuote(rev.id, customer, declineReason);
+      await loadRevisions();
+      setActiveCompareRevision(null);
+      setDeclineReason('');
+      setShowDeclineInput(false);
+    } catch (err: any) {
+      console.error('Failed to decline revised quote:', err);
+    } finally {
+      setIsDecliningRevision(false);
     }
   };
 
@@ -566,45 +703,89 @@ export function ProposalComparisonPage() {
 
               {/* Row: Final Selection Action */}
               <tr className="bg-slate-50/80">
-                <td className="p-4 font-bold text-slate-700">Selection Decision</td>
-                {proposals.map((prop) => (
-                  <td
-                    key={prop.id}
-                    className={`p-4 border-l border-slate-200 ${
-                      prop.status === 'ACCEPTED' ? 'bg-emerald-50/50' : ''
-                    }`}
-                  >
-                    {prop.status === 'ACCEPTED' ? (
-                      <div className="space-y-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs w-full justify-center shadow-2xs">
-                          <CheckCircle2 className="w-4 h-4" />
-                          Hired Contractor
+                <td className="p-4 font-bold text-slate-700">Selection & Revision Decision</td>
+                {proposals.map((prop) => {
+                  const activeRev = revisions.find(
+                    (r) => r.proposalId.toUpperCase() === prop.id.toUpperCase()
+                  );
+                  return (
+                    <td
+                      key={prop.id}
+                      className={`p-4 border-l border-slate-200 ${
+                        prop.status === 'ACCEPTED' ? 'bg-emerald-50/50' : ''
+                      }`}
+                    >
+                      {prop.status === 'ACCEPTED' ? (
+                        <div className="space-y-2">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs w-full justify-center shadow-2xs">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Hired Contractor
+                          </span>
+                          {associatedJob && (
+                            <Link to={`/jobs/${associatedJob.id}`} className="block">
+                              <Button variant="outline" size="sm" className="w-full text-xs">
+                                Open Workspace
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      ) : hasAcceptedProposal ? (
+                        <span className="text-slate-400 font-medium text-xs block text-center py-2">
+                          Another quote accepted
                         </span>
-                        {associatedJob && (
-                          <Link to={`/jobs/${associatedJob.id}`} className="block">
-                            <Button variant="outline" size="sm" className="w-full text-xs">
-                              Open Workspace
-                            </Button>
-                          </Link>
-                        )}
-                      </div>
-                    ) : hasAcceptedProposal ? (
-                      <span className="text-slate-400 font-medium text-xs block text-center py-2">
-                        Another quote accepted
-                      </span>
-                    ) : (
-                      <Button
-                        variant="primary"
-                        size="md"
-                        onClick={() => setSelectedProposalForConfirm(prop)}
-                        className="w-full shadow-2xs"
-                        rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                      >
-                        Select Professional
-                      </Button>
-                    )}
-                  </td>
-                ))}
+                      ) : activeRev?.status === 'REVISED' ? (
+                        <div className="space-y-2">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 w-full justify-center">
+                            Revised Quote Available
+                          </span>
+                          <Button
+                            variant="primary"
+                            size="md"
+                            onClick={() => setActiveCompareRevision(activeRev)}
+                            className="w-full shadow-2xs bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                            leftIcon={<TrendingDown className="w-3.5 h-3.5" />}
+                          >
+                            Compare Revised Quote
+                          </Button>
+                        </div>
+                      ) : activeRev?.status === 'PENDING' ? (
+                        <div className="space-y-2 text-center">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                            <Clock className="w-3 h-3" /> Revision Pending
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setHistoryModalRevision(activeRev)}
+                            className="text-[11px] text-blue-600 hover:underline block mx-auto cursor-pointer"
+                          >
+                            View Requested Changes
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Button
+                            variant="primary"
+                            size="md"
+                            onClick={() => setSelectedProposalForConfirm(prop)}
+                            className="w-full shadow-2xs"
+                            rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                          >
+                            Select Professional
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenRevisionModal(prop)}
+                            className="w-full text-xs"
+                            leftIcon={<FileEdit className="w-3.5 h-3.5" />}
+                          >
+                            Request Revision
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             </tbody>
           </table>
@@ -715,7 +896,7 @@ export function ProposalComparisonPage() {
                 </div>
 
                 {/* Action footer */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                   <Link
                     to={`/professionals/${prop.professionalId}`}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
@@ -724,22 +905,68 @@ export function ProposalComparisonPage() {
                     <ExternalLink className="w-3 h-3" />
                   </Link>
 
-                  {prop.status === 'ACCEPTED' ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Hired
-                    </span>
-                  ) : hasAcceptedProposal ? (
-                    <span className="text-slate-400 text-xs">Not Selected</span>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setSelectedProposalForConfirm(prop)}
-                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                    >
-                      Select Pro
-                    </Button>
-                  )}
+                  {(() => {
+                    const activeRev = revisions.find(
+                      (r) => r.proposalId.toUpperCase() === prop.id.toUpperCase()
+                    );
+                    if (prop.status === 'ACCEPTED') {
+                      return (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Hired
+                        </span>
+                      );
+                    }
+                    if (hasAcceptedProposal) {
+                      return <span className="text-slate-400 text-xs">Not Selected</span>;
+                    }
+                    if (activeRev?.status === 'REVISED') {
+                      return (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setActiveCompareRevision(activeRev)}
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                          leftIcon={<TrendingDown className="w-3.5 h-3.5" />}
+                        >
+                          Compare Revised Quote
+                        </Button>
+                      );
+                    }
+                    if (activeRev?.status === 'PENDING') {
+                      return (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setHistoryModalRevision(activeRev)}
+                          className="text-amber-700 border-amber-300 bg-amber-50 text-xs"
+                          leftIcon={<Clock className="w-3.5 h-3.5" />}
+                        >
+                          Revision Pending
+                        </Button>
+                      );
+                    }
+                    return (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenRevisionModal(prop)}
+                          className="text-xs"
+                          leftIcon={<FileEdit className="w-3.5 h-3.5" />}
+                        >
+                          Revise Quote
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setSelectedProposalForConfirm(prop)}
+                          rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                        >
+                          Select Pro
+                        </Button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -941,6 +1168,361 @@ export function ProposalComparisonPage() {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 Confirm & Hire Professional
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* REQUEST QUOTE REVISION MODAL (Pre-Acceptance) */}
+      {revisionTargetProposal && (
+        <Modal
+          isOpen={!!revisionTargetProposal}
+          onClose={() => !isSubmittingRevision && setRevisionTargetProposal(null)}
+          title={`Request Quote Revision — ${revisionTargetProposal.businessName || revisionTargetProposal.professionalName}`}
+          description={
+            revisionStep === 1
+              ? 'Specify what needs adjustment before accepting this proposal.'
+              : 'Review your revision request details before sending to the contractor.'
+          }
+          size="md"
+        >
+          {revisionStep === 1 ? (
+            <form onSubmit={handleNextToRevisionReview} className="space-y-4">
+              {revisionError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{revisionError}</span>
+                </div>
+              )}
+
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs flex justify-between items-center">
+                <span className="text-slate-500">Current Quoted Estimate:</span>
+                <span className="font-mono font-bold text-slate-900 text-sm">
+                  ₹{revisionTargetProposal.estimatedPrice.toLocaleString()} ({revisionTargetProposal.estimatedDuration})
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  What needs to change? <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={requestedChanges}
+                  onChange={(e) => setRequestedChanges(e.target.value)}
+                  placeholder="e.g. Can you include a comprehensive pipe pressure test and replace the washer for the main stopcock?"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Specific Scope Items to Modify (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={affectedScope}
+                  onChange={(e) => setAffectedScope(e.target.value)}
+                  placeholder="e.g. Stopcock washer, Pressure testing"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Target Budget (₹, Optional)
+                  </label>
+                  <input
+                    type="number"
+                    value={desiredBudget}
+                    onChange={(e) => setDesiredBudget(e.target.value ? Number(e.target.value) : '')}
+                    placeholder="e.g. 1000"
+                    className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Desired Duration (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={desiredDuration}
+                    onChange={(e) => setDesiredDuration(e.target.value)}
+                    placeholder="e.g. 1.5 hours"
+                    className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRevisionTargetProposal(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                >
+                  Review Request
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4 text-xs">
+              {revisionError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{revisionError}</span>
+                </div>
+              )}
+
+              <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                <h4 className="font-bold text-slate-900 text-sm">Summary of Revision Request</h4>
+                <div className="grid grid-cols-2 gap-2 text-slate-700">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Original Quote</span>
+                    <span className="font-mono font-bold">₹{revisionTargetProposal.estimatedPrice.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Target Budget</span>
+                    <span className="font-mono font-bold text-blue-700">
+                      {desiredBudget ? `₹${desiredBudget.toLocaleString()}` : 'Not specified'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200">
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Requested Changes</span>
+                  <p className="text-slate-800 font-medium leading-relaxed mt-0.5">{requestedChanges}</p>
+                </div>
+
+                {affectedScope && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Affected Scope</span>
+                    <p className="text-slate-800 font-medium leading-relaxed mt-0.5">{affectedScope}</p>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-slate-500 text-[11px] leading-relaxed">
+                The contractor will be notified to review and submit a formal revised quote. Your original proposal remains visible in history.
+              </p>
+
+              <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRevisionStep(1)}
+                  leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+                >
+                  Back to Edit
+                </Button>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setRevisionTargetProposal(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={isSubmittingRevision}
+                    onClick={handleSubmitRevisionRequest}
+                  >
+                    {isSubmittingRevision ? 'Sending...' : 'Confirm & Send Request'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* COMPARE REVISED QUOTE MODAL (Side-by-side comparison) */}
+      {activeCompareRevision && activeCompareRevision.revisedQuote && (
+        <Modal
+          isOpen={!!activeCompareRevision}
+          onClose={() => setActiveCompareRevision(null)}
+          title={`Compare Revised Quote — ${activeCompareRevision.professionalName}`}
+          description="Review the contractor's formal revised estimate against the original version."
+          size="lg"
+        >
+          <div className="space-y-5 text-xs">
+            {/* Price & Duration Comparison */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Original Quote (Version 1)
+                </span>
+                <div className="text-xl font-mono font-bold text-slate-700">
+                  ₹{activeCompareRevision.originalQuote.estimatedPrice.toLocaleString()}
+                </div>
+                <div className="text-slate-600 font-medium">
+                  Duration: {activeCompareRevision.originalQuote.estimatedDuration}
+                </div>
+                <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+                  Inclusions: {activeCompareRevision.originalQuote.includedServices.join(', ')}
+                </div>
+              </div>
+
+              <div className="p-4 bg-purple-50/70 rounded-xl border-2 border-purple-300 space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">
+                  Revised Quote (Version 2)
+                </span>
+                <div className="text-xl font-mono font-bold text-purple-950 flex items-center gap-2">
+                  <span>₹{activeCompareRevision.revisedQuote.estimatedPrice.toLocaleString()}</span>
+                  {activeCompareRevision.originalQuote.estimatedPrice > activeCompareRevision.revisedQuote.estimatedPrice && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      Save ₹{(activeCompareRevision.originalQuote.estimatedPrice - activeCompareRevision.revisedQuote.estimatedPrice).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                <div className="text-purple-900 font-medium">
+                  Duration: {activeCompareRevision.revisedQuote.estimatedDuration}
+                </div>
+                <div className="text-[11px] text-purple-950 pt-1 border-t border-purple-200">
+                  Inclusions: {activeCompareRevision.revisedQuote.includedServices.join(', ')}
+                </div>
+              </div>
+            </div>
+
+            {/* Contractor Explanation */}
+            <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+              <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                Contractor&apos;s Explanation of Changes
+              </span>
+              <p className="text-slate-800 leading-relaxed font-medium">
+                &ldquo;{activeCompareRevision.revisedQuote.explanation}&rdquo;
+              </p>
+            </div>
+
+            {/* Decline reason drawer if active */}
+            {showDeclineInput ? (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg space-y-2">
+                <label className="block text-xs font-bold text-red-900">
+                  Optional Reason for Declining Revision
+                </label>
+                <textarea
+                  rows={2}
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                  placeholder="e.g. Price is still higher than expected or duration conflicts with schedule..."
+                  className="w-full text-xs p-2 rounded border border-red-200 focus:outline-hidden"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeclineInput(false)}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={isDecliningRevision}
+                    onClick={() => handleDeclineRevisedQuote(activeCompareRevision)}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {isDecliningRevision ? 'Declining...' : 'Confirm Decline'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeclineInput(true)}
+                  className="text-red-700 hover:bg-red-50 border-red-200"
+                >
+                  Decline Revised Quote
+                </Button>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveCompareRevision(null)}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={isAcceptingRevision}
+                    onClick={() => handleAcceptRevisedQuoteAndHire(activeCompareRevision)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                    leftIcon={<Check className="w-4 h-4" />}
+                  >
+                    {isAcceptingRevision ? 'Hiring...' : `Accept & Hire (₹${activeCompareRevision.revisedQuote.estimatedPrice.toLocaleString()})`}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* REVISION HISTORY TIMELINE MODAL */}
+      {historyModalRevision && (
+        <Modal
+          isOpen={!!historyModalRevision}
+          onClose={() => setHistoryModalRevision(null)}
+          title={`Revision History — ${historyModalRevision.professionalName}`}
+          description="Chronological log of requested scope changes and quote versions."
+          size="md"
+        >
+          <div className="space-y-4 text-xs">
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                Customer Revision Request
+              </span>
+              <p className="text-slate-800 leading-relaxed font-medium">
+                {historyModalRevision.requestedChanges}
+              </p>
+              <span className="text-[10px] text-slate-400 block mt-1">
+                Requested on {new Date(historyModalRevision.customerRequestedAt).toLocaleString()}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="font-bold text-slate-900 text-xs">Version Snapshots</h4>
+              {historyModalRevision.history.map((v) => (
+                <div key={v.version} className="p-3 rounded-lg border border-slate-200 bg-white space-y-1">
+                  <div className="flex justify-between font-bold text-slate-800">
+                    <span>Version {v.version} {v.version === 1 ? '(Baseline)' : '(Revised)'}</span>
+                    <span className="font-mono text-blue-700">₹{v.estimatedPrice.toLocaleString()}</span>
+                  </div>
+                  <div className="text-slate-500 text-[11px]">Duration: {v.estimatedDuration}</div>
+                  {v.explanation && (
+                    <p className="text-slate-700 italic pt-1 border-t border-slate-100">&ldquo;{v.explanation}&rdquo;</p>
+                  )}
+                  <span className="text-[10px] text-slate-400 block pt-1">
+                    Recorded {new Date(v.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setHistoryModalRevision(null)}>
+                Close
               </Button>
             </div>
           </div>

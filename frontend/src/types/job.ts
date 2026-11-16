@@ -20,6 +20,24 @@ export type JobLifecycleStatus =
   | 'DISPUTED'
   | 'REFUNDED';
 
+export interface JobCompletionDetails {
+  workDone: string;
+  notes?: string;
+  completedAt: string;
+  confirmedAt?: string;
+}
+
+export interface JobActivityEvent {
+  id: string;
+  jobId: string;
+  title: string;
+  description: string;
+  actorRole: 'CUSTOMER' | 'PROFESSIONAL' | 'SYSTEM' | 'ADMIN';
+  actorName: string;
+  status?: JobLifecycleStatus;
+  timestamp: string;
+}
+
 export interface Job {
   id: string;
   problemId: string;
@@ -36,6 +54,9 @@ export interface Job {
   currentAmount: number;
   // Exact address is only accessible inside active Job Workspace to assigned participants
   exactServiceAddress: string;
+  durationEstimate?: string;
+  scheduleNotes?: string;
+  completionDetails?: JobCompletionDetails;
   startedAt?: string;
   completedAt?: string;
   customerConfirmedAt?: string;

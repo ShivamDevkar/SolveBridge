@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { mockProposalAdapter } from '@/services/mockProposalAdapter';
 import { mockProblemAdapter } from '@/services/mockProblemAdapter';
+import { mockQuoteRevisionAdapter } from '@/services/mockQuoteRevisionAdapter';
 import { useAuth } from '@/context/AuthContext';
 import type { Proposal, ProposalStatus } from '@/types/proposal';
 import type { Problem } from '@/types/problem';
 import type { Job } from '@/types/job';
+import type { QuoteRevision } from '@/types/quoteRevision';
 import {
   FileText,
   Clock,
@@ -16,6 +19,11 @@ import {
   ArrowRight,
   ChevronRight,
   Calendar,
+  FileEdit,
+  AlertCircle,
+  Check,
+  TrendingDown,
+  X,
 } from 'lucide-react';
 
 interface ProposalItemWithProblem {
@@ -30,18 +38,31 @@ export function MyProposalsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'ALL' | ProposalStatus>('ALL');
 
+  // Quote Revisions state
+  const [revisions, setRevisions] = useState<QuoteRevision[]>([]);
+  const [activeRevisionToSubmit, setActiveRevisionToSubmit] = useState<QuoteRevision | null>(null);
+  const [revisedPrice, setRevisedPrice] = useState<number>(0);
+  const [revisedDuration, setRevisedDuration] = useState('');
+  const [revisedInclusions, setRevisedInclusions] = useState('');
+  const [revisedExclusions, setRevisedExclusions] = useState('');
+  const [revisedExplanation, setRevisedExplanation] = useState('');
+  const [isSubmittingRevision, setIsSubmittingRevision] = useState(false);
+  const [revisionModalError, setRevisionModalError] = useState<string | null>(null);
+
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
       try {
         const proId = user?.id || 'user-demo-pro';
-        const [propsList, jobsList] = await Promise.all([
+        const [propsList, jobsList, revsList] = await Promise.all([
           mockProposalAdapter.getProposalsByProfessional(proId),
           mockProposalAdapter.getJobs(),
+          mockQuoteRevisionAdapter.getRevisionsForProfessional(proId),
         ]);
 
         if (!isMounted) return;
+        setRevisions(revsList);
 
         // Fetch corresponding problem records
         const combined: ProposalItemWithProblem[] = [];
@@ -71,6 +92,67 @@ export function MyProposalsPage() {
       isMounted = false;
     };
   }, [user]);
+
+  const handleOpenSubmitRevisedQuote = (rev: QuoteRevision) => {
+    setActiveRevisionToSubmit(rev);
+    setRevisedPrice(rev.desiredBudget || rev.originalQuote.estimatedPrice);
+    setRevisedDuration(rev.desiredDuration || rev.originalQuote.estimatedDuration);
+    setRevisedInclusions(rev.originalQuote.includedServices.join(', '));
+    setRevisedExclusions(rev.originalQuote.excludedServices.join(', '));
+    setRevisedExplanation('');
+    setRevisionModalError(null);
+  };
+
+  const handleSubmitRevisedQuote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRevisionToSubmit) return;
+    if (!revisedPrice || revisedPrice <= 0) {
+      setRevisionModalError('Please enter a valid revised price.');
+      return;
+    }
+    if (!revisedExplanation.trim() || revisedExplanation.trim().length < 10) {
+      setRevisionModalError('Please explain the modifications made (at least 10 characters).');
+      return;
+    }
+
+    setIsSubmittingRevision(true);
+    setRevisionModalError(null);
+
+    try {
+      await mockQuoteRevisionAdapter.submitRevisedQuote(
+        {
+          revisionId: activeRevisionToSubmit.id,
+          revisedPrice: Number(revisedPrice),
+          revisedDuration: revisedDuration.trim(),
+          includedServices: revisedInclusions.split(',').map((s) => s.trim()).filter(Boolean),
+          excludedServices: revisedExclusions.split(',').map((s) => s.trim()).filter(Boolean),
+          explanation: revisedExplanation.trim(),
+        },
+        {
+          id: user?.id || 'user-demo-pro',
+          name: user?.name || 'Arun Kumar',
+        }
+      );
+      // Reload proposals and revisions
+      const proId = user?.id || 'user-demo-pro';
+      const [propsList, revsList] = await Promise.all([
+        mockProposalAdapter.getProposalsByProfessional(proId),
+        mockQuoteRevisionAdapter.getRevisionsForProfessional(proId),
+      ]);
+      setRevisions(revsList);
+      setItems((prev) =>
+        prev.map((item) => {
+          const updated = propsList.find((p) => p.id === item.proposal.id);
+          return updated ? { ...item, proposal: updated } : item;
+        })
+      );
+      setActiveRevisionToSubmit(null);
+    } catch (err: any) {
+      setRevisionModalError(err?.message || 'Failed to submit revised quote.');
+    } finally {
+      setIsSubmittingRevision(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -277,6 +359,90 @@ export function MyProposalsPage() {
                         Duration: {proposal.estimatedDuration}
                       </span>
                     </div>
+
+                    {/* Active Revision Banner (if any) */}
+                    {(() => {
+                      const revision = revisions.find(
+                        (r) => r.proposalId.toUpperCase() === proposal.id.toUpperCase()
+                      );
+                      if (!revision) return null;
+
+                      if (revision.status === 'PENDING') {
+                        return (
+                          <div className="mt-3 p-3.5 bg-amber-50/90 rounded-lg border border-amber-300 text-xs space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-amber-600" />
+                                Customer Requested Quote Revision
+                              </span>
+                              <span className="text-[10px] text-amber-700">
+                                {new Date(revision.customerRequestedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-slate-800 bg-white/90 p-2.5 rounded border border-amber-200 leading-relaxed font-medium">
+                              &ldquo;{revision.requestedChanges}&rdquo;
+                            </p>
+                            <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                              <div className="flex items-center gap-3 text-slate-600 text-[11px]">
+                                {revision.desiredBudget && (
+                                  <span>
+                                    Desired Budget: <strong className="text-slate-900 font-mono">₹{revision.desiredBudget.toLocaleString()}</strong>
+                                  </span>
+                                )}
+                                {revision.desiredDuration && (
+                                  <span>
+                                    Target Duration: <strong className="text-slate-900">{revision.desiredDuration}</strong>
+                                  </span>
+                                )}
+                              </div>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => handleOpenSubmitRevisedQuote(revision)}
+                                className="text-xs bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
+                                leftIcon={<FileEdit className="w-3.5 h-3.5" />}
+                              >
+                                Review & Submit Revised Quote
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (revision.status === 'REVISED') {
+                        return (
+                          <div className="mt-2.5 p-2.5 bg-purple-50 rounded-lg border border-purple-200 text-xs flex items-center justify-between">
+                            <span className="text-purple-900 font-semibold flex items-center gap-1.5">
+                              <TrendingDown className="w-4 h-4 text-purple-600" />
+                              Revised Quote Submitted: ₹{revision.revisedQuote?.estimatedPrice.toLocaleString()} (Awaiting Customer Acceptance)
+                            </span>
+                            <span className="text-[10px] text-purple-700 italic">
+                              Version {revision.revisedQuote?.version}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      if (revision.status === 'ACCEPTED') {
+                        return (
+                          <div className="mt-2.5 p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-xs text-emerald-800 font-semibold flex items-center gap-1.5">
+                            <Check className="w-4 h-4 text-emerald-600" />
+                            Customer Accepted Revised Quote (₹{revision.revisedQuote?.estimatedPrice.toLocaleString()})
+                          </div>
+                        );
+                      }
+
+                      if (revision.status === 'DECLINED') {
+                        return (
+                          <div className="mt-2.5 p-2.5 bg-slate-100 rounded-lg border border-slate-200 text-xs text-slate-600 flex items-center gap-1.5">
+                            <X className="w-4 h-4 text-slate-400" />
+                            Customer Declined Revision ({revision.customerDecisionNote || 'No explanation provided'})
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })()}
                   </div>
 
                   <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
@@ -304,6 +470,140 @@ export function MyProposalsPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* SUBMIT REVISED QUOTE MODAL */}
+      {activeRevisionToSubmit && (
+        <Modal
+          isOpen={!!activeRevisionToSubmit}
+          onClose={() => !isSubmittingRevision && setActiveRevisionToSubmit(null)}
+          title={`Submit Revised Quote to ${activeRevisionToSubmit.customerName}`}
+          description="Update your pricing, scope inclusions, and estimated duration in response to the customer's request."
+          size="lg"
+        >
+          <form onSubmit={handleSubmitRevisedQuote} className="space-y-4 text-xs">
+            {revisionModalError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{revisionModalError}</span>
+              </div>
+            )}
+
+            {/* Customer Request Summary Box */}
+            <div className="p-3.5 bg-amber-50 rounded-lg border border-amber-200 space-y-1.5">
+              <span className="text-[10px] uppercase font-bold text-amber-800 block">
+                Customer&apos;s Requested Revision:
+              </span>
+              <p className="text-slate-800 leading-relaxed font-medium">
+                &ldquo;{activeRevisionToSubmit.requestedChanges}&rdquo;
+              </p>
+              <div className="flex items-center gap-4 text-[11px] text-amber-900 pt-1">
+                {activeRevisionToSubmit.desiredBudget && (
+                  <span>
+                    Customer Desired Budget: <strong>₹{activeRevisionToSubmit.desiredBudget.toLocaleString()}</strong>
+                  </span>
+                )}
+                {activeRevisionToSubmit.desiredDuration && (
+                  <span>
+                    Target Duration: <strong>{activeRevisionToSubmit.desiredDuration}</strong>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Revised Price (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={revisedPrice}
+                  onChange={(e) => setRevisedPrice(Number(e.target.value))}
+                  placeholder="e.g. 1000"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Original quote was ₹{activeRevisionToSubmit.originalQuote.estimatedPrice.toLocaleString()}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Revised Duration
+                </label>
+                <input
+                  type="text"
+                  value={revisedDuration}
+                  onChange={(e) => setRevisedDuration(e.target.value)}
+                  placeholder="e.g. 1.5 hours"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Included Services (Comma separated)
+              </label>
+              <textarea
+                rows={2}
+                value={revisedInclusions}
+                onChange={(e) => setRevisedInclusions(e.target.value)}
+                placeholder="e.g. Pipe inspection, Pressure test, Stopcock washer replacement"
+                className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Excluded Services (Optional, comma separated)
+              </label>
+              <input
+                type="text"
+                value={revisedExclusions}
+                onChange={(e) => setRevisedExclusions(e.target.value)}
+                placeholder="e.g. Deep wall opening"
+                className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Explanation of Changes <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                required
+                value={revisedExplanation}
+                onChange={(e) => setRevisedExplanation(e.target.value)}
+                placeholder="Explain clearly how this quote has been adjusted to address the customer's request..."
+                className="w-full text-xs sm:text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-hidden resize-none"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveRevisionToSubmit(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={isSubmittingRevision}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              >
+                {isSubmittingRevision ? 'Submitting...' : 'Send Revised Quote to Customer'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

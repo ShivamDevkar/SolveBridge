@@ -85,5 +85,18 @@ export interface IProposalService {
    * Retrieves a specific simulated job by ID.
    */
   getJobById(jobId: string): Promise<Job | null>;
+
+  /**
+   * Updates an existing proposal's quoted parameters (used in quote revisions).
+   */
+  updateProposalQuote?(
+    proposalId: string,
+    updates: {
+      estimatedPrice: number;
+      estimatedDuration?: string;
+      includedServices?: string[];
+      excludedServices?: string[];
+    }
+  ): Promise<Proposal | null>;
 }
 
