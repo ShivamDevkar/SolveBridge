@@ -1,10 +1,25 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { UserRole } from '@/types/common';
-import { Lock, Mail, ArrowRight, User, Briefcase, ShieldCheck, Check } from 'lucide-react';
+import { SessionPersistence } from '@/types/auth';
+import { useAuth } from '@/context/AuthContext';
+import { validateLoginFields } from '@/lib/validation';
+import {
+  Lock,
+  Mail,
+  ArrowRight,
+  User,
+  Briefcase,
+  ShieldCheck,
+  Check,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  X,
+} from 'lucide-react';
 
 interface PortalOptionConfig {
   role: UserRole;
@@ -82,27 +97,131 @@ const PORTALS: PortalOptionConfig[] = [
   },
 ];
 
+/**
+ * Validates intended return destination against the authenticated user's role.
+ * Prevents unauthorized cross-role redirects and external open redirects.
+ */
+function getSafeRedirectUrl(targetPath: string | undefined, authenticatedRole: UserRole): string {
+  const defaultDashboard =
+    authenticatedRole === 'CUSTOMER'
+      ? '/customer/dashboard'
+      : authenticatedRole === 'PROFESSIONAL'
+      ? '/pro/dashboard'
+      : '/admin/dashboard';
+
+  if (!targetPath || typeof targetPath !== 'string') {
+    return defaultDashboard;
+  }
+
+  // Prevent external or protocol-relative open redirects, or looping auth redirects
+  if (!targetPath.startsWith('/') || targetPath.startsWith('//') || targetPath.startsWith('/auth')) {
+    return defaultDashboard;
+  }
+
+  // Role validation: ensure path is authorized for this role or is the shared job workspace
+  if (authenticatedRole === 'CUSTOMER') {
+    if (targetPath.startsWith('/customer') || targetPath.startsWith('/jobs')) {
+      return targetPath;
+    }
+  } else if (authenticatedRole === 'PROFESSIONAL') {
+    if (targetPath.startsWith('/pro') || targetPath.startsWith('/jobs')) {
+      return targetPath;
+    }
+  } else if (authenticatedRole === 'ADMIN') {
+    if (targetPath.startsWith('/admin') || targetPath.startsWith('/jobs')) {
+      return targetPath;
+    }
+  }
+
+  return defaultDashboard;
+}
+
 export function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole>('CUSTOMER');
   const [email, setEmail] = useState('customer@solvebid.demo');
   const [password, setPassword] = useState('demo1234');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { login, isAuthenticated, role: userRole, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect already authenticated users away from login to their role dashboard
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && userRole) {
+      const defaultDashboard =
+        userRole === 'CUSTOMER'
+          ? '/customer/dashboard'
+          : userRole === 'PROFESSIONAL'
+          ? '/pro/dashboard'
+          : '/admin/dashboard';
+      navigate(defaultDashboard, { replace: true });
+    }
+  }, [isAuthenticated, authLoading, userRole, navigate]);
 
   const activePortal = PORTALS.find((p) => p.role === selectedRole) || PORTALS[0];
 
   const handleRoleChange = (role: UserRole) => {
     setSelectedRole(role);
+    setFieldErrors({});
+    setAuthError(null);
     const target = PORTALS.find((p) => p.role === role);
     if (target) {
       setEmail(target.demoEmail);
+      setPassword('demo1234');
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedRole === 'CUSTOMER') navigate('/customer/dashboard');
-    if (selectedRole === 'PROFESSIONAL') navigate('/pro/dashboard');
-    if (selectedRole === 'ADMIN') navigate('/admin/dashboard');
+
+    // 1. Prevent duplicate submission
+    if (isSubmitting || authLoading) return;
+
+    // 2. Validate form fields
+    const validation = validateLoginFields({ email, password });
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors);
+      return;
+    }
+
+    setFieldErrors({});
+    setAuthError(null);
+    setIsSubmitting(true);
+
+    const persistence: SessionPersistence = rememberMe ? 'local' : 'session';
+
+    try {
+      // 3. Authenticate via context action
+      const result = await login(
+        {
+          email,
+          password,
+          role: selectedRole,
+          rememberMe,
+        },
+        persistence
+      );
+
+      // 4. Role-aware redirection with protected-route return destination support
+      const locationState = location.state as { from?: { pathname: string } } | undefined;
+      const targetDestination = locationState?.from?.pathname;
+      const safeUrl = getSafeRedirectUrl(targetDestination, result.user.role);
+
+      navigate(safeUrl, { replace: true });
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Unable to sign in. Please verify your credentials and selected portal.';
+      setAuthError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -114,7 +233,7 @@ export function LoginPage() {
         </CardDescription>
       </CardHeader>
 
-      <form onSubmit={handleLogin}>
+      <form onSubmit={handleLogin} noValidate>
         <CardContent className="space-y-5">
           {/* 3 Prominent Selectable Portal Options */}
           <div className="space-y-2.5">
@@ -198,30 +317,95 @@ export function LoginPage() {
             </div>
           </div>
 
+          {/* Authentication Failure Error Banner */}
+          {authError && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2.5 shadow-2xs"
+            >
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span className="font-semibold block text-[11px] uppercase tracking-wider text-red-900">
+                  Authentication Failed
+                </span>
+                <p className="text-red-700 mt-0.5 leading-relaxed">{authError}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAuthError(null)}
+                aria-label="Dismiss error notification"
+                className="text-red-400 hover:text-red-700 p-0.5 rounded transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Form Credentials Section */}
           <div className="space-y-3 pt-2 border-t border-slate-100">
             <Input
               label="Email Address"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                if (authError) setAuthError(null);
+              }}
               leftIcon={<Mail className="w-4 h-4" />}
+              error={fieldErrors.email}
               required
+              disabled={isSubmitting || authLoading}
             />
 
             <Input
               label="Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                if (authError) setAuthError(null);
+              }}
               leftIcon={<Lock className="w-4 h-4" />}
+              rightIcon={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="pointer-events-auto text-slate-400 hover:text-slate-600 focus:outline-hidden p-0.5 cursor-pointer"
+                  tabIndex={0}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              }
+              error={fieldErrors.password}
               required
+              disabled={isSubmitting || authLoading}
             />
           </div>
 
+          {/* Development Prototype Demonstration Notice */}
+          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px] text-slate-500 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-pulse" />
+              <span>Development Demo: Seed credentials for {activePortal.title}</span>
+            </span>
+            <span className="font-mono text-[10px] text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+              demo1234
+            </span>
+          </div>
+
           <div className="flex items-center justify-between text-xs pt-1">
-            <label className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900">
-              <input type="checkbox" defaultChecked className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+            <label className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                disabled={isSubmitting || authLoading}
+              />
               <span>Remember this session</span>
             </label>
             <Link to="/auth/forgot-password" className="text-blue-600 hover:underline font-medium">
@@ -231,10 +415,12 @@ export function LoginPage() {
         </CardContent>
 
         <CardFooter className="flex-col gap-3">
-          {/* Role-Specific Primary CTA */}
+          {/* Role-Specific Primary CTA with Loading Spinner */}
           <Button
             type="submit"
             size="lg"
+            isLoading={isSubmitting || authLoading}
+            disabled={isSubmitting || authLoading}
             className={`w-full font-bold shadow-sm transition-all ${activePortal.colors.buttonBg}`}
             rightIcon={<ArrowRight className="w-4 h-4" />}
           >

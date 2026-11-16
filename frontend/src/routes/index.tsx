@@ -7,6 +7,7 @@ import { CustomerLayout } from '@/layouts/CustomerLayout';
 import { ProfessionalLayout } from '@/layouts/ProfessionalLayout';
 import { JobWorkspaceLayout } from '@/layouts/JobWorkspaceLayout';
 import { AdminLayout } from '@/layouts/AdminLayout';
+import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
 // Public Pages
 import { LandingPage } from '@/pages/public/LandingPage';
@@ -14,7 +15,9 @@ import { AboutPage, PublicProProfilePage } from '@/pages/public/AboutPage';
 
 // Auth Pages
 import { LoginPage } from '@/pages/auth/LoginPage';
-import { RegisterPage, ForgotPasswordPage, ResetPasswordPage } from '@/pages/auth/RegisterPage';
+import { RegisterPage } from '@/pages/auth/RegisterPage';
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 
 // Customer Pages
 import { CustomerDashboardPage } from '@/pages/customer/CustomerDashboardPage';
@@ -33,6 +36,7 @@ import {
 
 // Professional Pages
 import { ProDashboardPage } from '@/pages/professional/ProDashboardPage';
+import { ProRegistrationSuccessPage } from '@/pages/professional/ProRegistrationSuccessPage';
 import {
   MatchingProblemsPage,
   ProProblemInspectPage,
@@ -106,7 +110,11 @@ export const router = createBrowserRouter([
   // 3. Customer Portal Routes
   {
     path: '/customer',
-    element: <CustomerLayout />,
+    element: (
+      <ProtectedRoute allowedRoles={['CUSTOMER']}>
+        <CustomerLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <Navigate to="/customer/dashboard" replace /> },
       { path: 'dashboard', element: <CustomerDashboardPage /> },
@@ -126,10 +134,15 @@ export const router = createBrowserRouter([
   // 4. Professional Portal Routes
   {
     path: '/pro',
-    element: <ProfessionalLayout />,
+    element: (
+      <ProtectedRoute allowedRoles={['PROFESSIONAL']}>
+        <ProfessionalLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <Navigate to="/pro/dashboard" replace /> },
       { path: 'dashboard', element: <ProDashboardPage /> },
+      { path: 'onboarding', element: <ProRegistrationSuccessPage /> },
       { path: 'matching-problems', element: <MatchingProblemsPage /> },
       { path: 'matching-problems/:problemId', element: <ProProblemInspectPage /> },
       { path: 'proposals', element: <MyProposalsPage /> },
@@ -147,9 +160,32 @@ export const router = createBrowserRouter([
   // 5. Dedicated Shared Job Workspace Routes
   {
     path: '/jobs/:jobId',
-    element: <JobWorkspaceLayout />,
+    element: (
+      <ProtectedRoute allowedRoles={['CUSTOMER', 'PROFESSIONAL', 'ADMIN']}>
+        <JobWorkspaceLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <JobWorkspaceOverviewPage /> },
+      { path: 'overview', element: <JobWorkspaceOverviewPage /> },
+      { path: 'chat', element: <JobWorkspaceChatPage /> },
+      { path: 'quote-revision', element: <QuoteRevisionPage /> },
+      { path: 'completion', element: <JobCompletionPage /> },
+      { path: 'review', element: <JobReviewPage /> },
+      { path: 'dispute', element: <JobDisputePage /> },
+    ],
+  },
+  // Singular /job/:jobId route alias
+  {
+    path: '/job/:jobId',
+    element: (
+      <ProtectedRoute allowedRoles={['CUSTOMER', 'PROFESSIONAL', 'ADMIN']}>
+        <JobWorkspaceLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <JobWorkspaceOverviewPage /> },
+      { path: 'overview', element: <JobWorkspaceOverviewPage /> },
       { path: 'chat', element: <JobWorkspaceChatPage /> },
       { path: 'quote-revision', element: <QuoteRevisionPage /> },
       { path: 'completion', element: <JobCompletionPage /> },
@@ -161,13 +197,19 @@ export const router = createBrowserRouter([
   // 6. Admin Console Routes
   {
     path: '/admin',
-    element: <AdminLayout />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'dashboard', element: <AdminDashboardPage /> },
       { path: 'professionals', element: <AdminProfessionalsListPage /> },
       { path: 'verification', element: <AdminVerificationQueuePage /> },
       { path: 'verification/:proId', element: <AdminVerificationDetailPage /> },
+      { path: 'verifications', element: <Navigate to="/admin/verification" replace /> },
+      { path: 'verifications/:proId', element: <AdminVerificationDetailPage /> },
       { path: 'problems', element: <AdminProblemsListPage /> },
       { path: 'jobs', element: <AdminJobsListPage /> },
       { path: 'disputes', element: <AdminDisputesListPage /> },

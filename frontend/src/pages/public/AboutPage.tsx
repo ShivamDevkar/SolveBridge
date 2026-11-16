@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Accordion, AccordionItemData } from '@/components/ui/Accordion';
-import { PlaceholderPage } from '@/components/common/PlaceholderPage';
 import {
   ArrowRight,
   ShieldCheck,
@@ -1267,21 +1266,5 @@ export function AboutPage() {
   );
 }
 
-// Preserve existing PublicProProfilePage export for route: /professionals/:proId
-export function PublicProProfilePage() {
-  return (
-    <PlaceholderPage
-      title="Verified Professional Profile Showcase"
-      route="/professionals/:proId"
-      portal="Public"
-      phase="Phase 02 (Public Experience - Tier 1 Core MVP)"
-      description="Public professional showcase demonstrating verified credentials, overall and category ratings, completed job counts, service coverage radius, response rate, and verified customer reviews."
-      backTo={{ label: 'Back to Home', path: '/' }}
-      highlights={[
-        'Verified Professional Badge: Awarded exclusively post-admin credential review.',
-        'Reputation Breakdown: Ratings across Quality, Professionalism, Punctuality, and Value.',
-        'Completed Job History: Verified completed jobs linked to customer confirmed work.',
-      ]}
-    />
-  );
-}
+// Export real PublicProProfilePage for route: /professionals/:proId
+export { PublicProProfilePage } from './PublicProProfilePage';

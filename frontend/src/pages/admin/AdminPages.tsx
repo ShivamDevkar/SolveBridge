@@ -1,5 +1,15 @@
 import { PlaceholderPage } from '@/components/common/PlaceholderPage';
 
+// Real Phase 08 Admin Console Implementations
+export { AdminDashboardPage } from './AdminDashboardPage';
+export { AdminVerificationQueuePage } from './AdminVerificationQueuePage';
+export { AdminVerificationDetailPage } from './AdminVerificationDetailPage';
+export { AdminDisputesListPage } from './AdminDisputesListPage';
+export { AdminDisputeDetailPage } from './AdminDisputeDetailPage';
+export { AdminCategoriesPage } from './AdminCategoriesPage';
+export { AdminAuditLogsPage } from './AdminAuditLogsPage';
+
+// Retained Tier 2 / Future Expansion Admin Pages
 export function AdminProfessionalsListPage() {
   return (
     <PlaceholderPage
@@ -9,36 +19,6 @@ export function AdminProfessionalsListPage() {
       phase="Phase 08 (Admin Governance & Operations)"
       description="Administrative directory of all registered service professionals across all verification states (Registered, Pending Verification, Verified, Suspended, Rejected)."
       backTo={{ label: 'Back to Admin Dashboard', path: '/admin/dashboard' }}
-    />
-  );
-}
-
-export function AdminVerificationQueuePage() {
-  return (
-    <PlaceholderPage
-      title="Professional Verification Audit Queue"
-      route="/admin/verification"
-      portal="Admin"
-      phase="Phase 08 (Admin Console - Tier 1 Core MVP)"
-      description="Queue of service specialists awaiting credential validation. Admins inspect uploaded ID proofs, business certificates, trade licenses, and background checks."
-      backTo={{ label: 'Back to Admin Dashboard', path: '/admin/dashboard' }}
-      highlights={[
-        'Actions: Approve Credential, Reject Submission, or Request Further Documentation.',
-        'Approval triggers automatic "Verified Professional" badge assignment on user profile.',
-      ]}
-    />
-  );
-}
-
-export function AdminVerificationDetailPage() {
-  return (
-    <PlaceholderPage
-      title="Professional Document Inspection & Decision"
-      route="/admin/verification/:proId"
-      portal="Admin"
-      phase="Phase 08 (Admin Console - Tier 1 Core MVP)"
-      description="Deep document audit view with high-resolution document viewer and audit trail logging for administrative decisions."
-      backTo={{ label: 'Back to Verification Queue', path: '/admin/verification' }}
     />
   );
 }
@@ -64,48 +44,6 @@ export function AdminJobsListPage() {
       portal="Admin"
       phase="Phase 08 (Admin Console - Tier 1 Core MVP)"
       description="Real-time monitor of all active and historical jobs across the platform, filterable by state machine status (SCHEDULED, ARRIVED, INSPECTION, IN_PROGRESS, COMPLETED, CUSTOMER_CONFIRMED, DISPUTED, CLOSED)."
-      backTo={{ label: 'Back to Admin Dashboard', path: '/admin/dashboard' }}
-    />
-  );
-}
-
-export function AdminDisputesListPage() {
-  return (
-    <PlaceholderPage
-      title="Dispute Arbitration & Resolution Center"
-      route="/admin/disputes"
-      portal="Admin"
-      phase="Phase 08 (Admin Console - Tier 1 Core MVP)"
-      description="Arbitration queue of open conflicts between customers and professionals. Admins inspect chat logs, quote revision histories, and completion photos."
-      backTo={{ label: 'Back to Admin Dashboard', path: '/admin/dashboard' }}
-      highlights={[
-        'Decisions: Redo Service, Partial Refund, Full Refund, Dismiss Dispute, or Close Without Compensation.',
-      ]}
-    />
-  );
-}
-
-export function AdminDisputeDetailPage() {
-  return (
-    <PlaceholderPage
-      title="Dispute Investigation & Case Arbitration"
-      route="/admin/disputes/:disputeId"
-      portal="Admin"
-      phase="Phase 08 (Admin Console - Tier 1 Core MVP)"
-      description="Evidence inspection workspace containing full chat transcripts, quote revision logs, before/after photos, and arbitration decision form."
-      backTo={{ label: 'Back to Disputes Center', path: '/admin/disputes' }}
-    />
-  );
-}
-
-export function AdminCategoriesPage() {
-  return (
-    <PlaceholderPage
-      title="Service Categories & Skill Taxonomy Manager"
-      route="/admin/categories"
-      portal="Admin"
-      phase="Phase 08 (Admin Console - Tier 1 Core MVP)"
-      description="Taxonomy manager for creating new service domains, subcategories, problem symptom tags, and required skill certifications."
       backTo={{ label: 'Back to Admin Dashboard', path: '/admin/dashboard' }}
     />
   );
@@ -146,23 +84,6 @@ export function AdminAnalyticsPage() {
       phase="Phase 08 (Admin Console - Tier 2)"
       description="Interactive charts tracking proposal acceptance rates, average response times, category demand heatmaps, and dispute percentages."
       backTo={{ label: 'Back to Admin Dashboard', path: '/admin/dashboard' }}
-    />
-  );
-}
-
-export function AdminAuditLogsPage() {
-  return (
-    <PlaceholderPage
-      title="Immutable System Audit Trail"
-      route="/admin/audit-logs"
-      portal="Admin"
-      phase="Phase 08 (Admin Console - Tier 2)"
-      description="Searchable, filterable audit log recording every critical state transition, quote approval, verification action, and administrative decision with actor ID and timestamp."
-      backTo={{ label: 'Back to Admin Dashboard', path: '/admin/dashboard' }}
-      highlights={[
-        'Compliance: Immutable record of who approved what and when.',
-        'Filterable by Actor, Entity Type (Problem, Proposal, Job, Dispute), and Action.',
-      ]}
     />
   );
 }

@@ -1,6 +1,7 @@
 export type UserRole = 'CUSTOMER' | 'PROFESSIONAL' | 'ADMIN';
 
 export type VerificationStatus =
+  | 'UNVERIFIED'
   | 'REGISTERED'
   | 'PENDING_VERIFICATION'
   | 'VERIFIED'
@@ -16,4 +17,10 @@ export interface User {
   role: UserRole;
   avatarUrl?: string;
   verificationStatus?: VerificationStatus;
+  phone?: string;
+  city?: string;
+  businessName?: string;
+  category?: string;
+  skills?: string[];
+  coverageRadius?: string;
 }
