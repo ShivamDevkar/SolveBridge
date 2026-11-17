@@ -29,7 +29,10 @@ export function ProtectedRoute({
   redirectPath = '/auth/login',
   children,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, role, isLoading } = useAuth();
+  const { user, loading } = useAuth();
+  const isAuthenticated = Boolean(user);
+  const isLoading = loading;
+  const role = user?.user_metadata?.role as UserRole | undefined;
   const location = useLocation();
 
   // Validate redirectPath to prevent open redirects or protocol-relative loops

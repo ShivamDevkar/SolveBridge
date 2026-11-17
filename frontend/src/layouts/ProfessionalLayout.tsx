@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useState } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Search,
@@ -18,52 +17,122 @@ import {
   X,
   LogOut,
   Radio,
+  ExternalLink,
   AlertTriangle,
-} from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
+} from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
+import { DropdownMenu } from "@/components/ui/DropdownMenu";
+import { useAuth } from "@/context/AuthContext";
 
 export function ProfessionalLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
+  const { signOut, user } = useAuth();
+  const displayName =
+    (typeof user?.user_metadata?.name === "string" && user.user_metadata.name) ||
+    (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
+    user?.email ||
+    "Professional";
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+  const isVerified = user?.user_metadata?.verificationStatus === "VERIFIED";
   const handleLogout = async () => {
-    await logout();
-    navigate('/auth/login', { replace: true });
+    const { error } = await signOut();
+    if (!error) {
+      window.location.href = "/auth/login";
+    }
   };
 
-  const displayName = user?.name || 'Professional Partner';
-  const initials =
-    displayName
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((n) => n[0].toUpperCase())
-      .join('') || 'PR';
-
-  const isVerified = user?.verificationStatus === 'VERIFIED';
-
   const navItems = [
-    { label: 'Dashboard', path: '/pro/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { label: 'Matching Problems', path: '/pro/matching-problems', icon: <Search className="w-4 h-4" />, badge: '5 New' },
-    { label: 'My Proposals', path: '/pro/proposals', icon: <FileCheck className="w-4 h-4" /> },
-    { label: 'Active Jobs', path: '/pro/jobs', icon: <Briefcase className="w-4 h-4" /> },
-    { label: 'Messages', path: '/pro/messages', icon: <MessageSquare className="w-4 h-4" /> },
-    { label: 'Schedule', path: '/pro/schedule', icon: <Calendar className="w-4 h-4" /> },
-    { label: 'Earnings', path: '/pro/earnings', icon: <IndianRupee className="w-4 h-4" /> },
-    { label: 'Reviews & Reputation', path: '/pro/reviews', icon: <Star className="w-4 h-4" /> },
-    { label: 'Profile', path: '/pro/profile', icon: <UserCheck className="w-4 h-4" /> },
-    { label: 'Verification', path: '/pro/verification', icon: <ShieldCheck className="w-4 h-4" /> },
-    { label: 'Settings', path: '/pro/settings', icon: <Settings className="w-4 h-4" /> },
+    {
+      label: "Dashboard",
+      path: "/pro/dashboard",
+      icon: <LayoutDashboard className="w-4 h-4" />,
+    },
+    {
+      label: "Matching Problems",
+      path: "/pro/matching-problems",
+      icon: <Search className="w-4 h-4" />,
+      badge: "5 New",
+    },
+    {
+      label: "My Proposals",
+      path: "/pro/proposals",
+      icon: <FileCheck className="w-4 h-4" />,
+    },
+    {
+      label: "Active Jobs",
+      path: "/pro/jobs",
+      icon: <Briefcase className="w-4 h-4" />,
+    },
+    {
+      label: "Messages",
+      path: "/pro/messages",
+      icon: <MessageSquare className="w-4 h-4" />,
+    },
+    {
+      label: "Schedule",
+      path: "/pro/schedule",
+      icon: <Calendar className="w-4 h-4" />,
+    },
+    {
+      label: "Earnings",
+      path: "/pro/earnings",
+      icon: <IndianRupee className="w-4 h-4" />,
+    },
+    {
+      label: "Reviews & Reputation",
+      path: "/pro/reviews",
+      icon: <Star className="w-4 h-4" />,
+    },
+    {
+      label: "Profile",
+      path: "/pro/profile",
+      icon: <UserCheck className="w-4 h-4" />,
+    },
+    {
+      label: "Verification",
+      path: "/pro/verification",
+      icon: <ShieldCheck className="w-4 h-4" />,
+    },
+    {
+      label: "Settings",
+      path: "/pro/settings",
+      icon: <Settings className="w-4 h-4" />,
+    },
   ];
 
   const profileMenuItems = [
-    { id: '1', label: 'Pro Profile Settings', icon: <UserCheck className="w-4 h-4" />, onClick: () => navigate('/pro/profile') },
-    { id: '2', label: 'Verification Status', icon: <ShieldCheck className="w-4 h-4" />, onClick: () => navigate('/pro/verification') },
-    { id: '3', label: 'Sign Out', icon: <LogOut className="w-4 h-4" />, variant: 'danger' as const, onClick: handleLogout },
+    {
+      id: "1",
+      label: "Pro Profile Settings",
+      icon: <Settings className="w-4 h-4" />,
+      onClick: () => alert("Pro Settings"),
+    },
+    {
+      id: "2",
+      label: "Switch to Customer Portal",
+      icon: <ExternalLink className="w-4 h-4" />,
+      onClick: () => (window.location.href = "/customer/dashboard"),
+    },
+    {
+      id: "3",
+      label: "Sign Out",
+      icon: <LogOut className="w-4 h-4" />,
+      variant: "danger" as const,
+      onClick: () => {
+        void signOut().then(({ error }) => {
+          if (!error) {
+            window.location.href = "/auth/login";
+          }
+        });
+      },
+    },
   ];
 
   return (
@@ -72,11 +141,16 @@ export function ProfessionalLayout() {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 shrink-0 select-none shadow-xs">
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100">
-          <Link to="/" className="flex items-center gap-2 group focus-visible:ring-2 focus-visible:ring-amber-500 rounded-lg p-1">
+          <Link
+            to="/"
+            className="flex items-center gap-2 group focus-visible:ring-2 focus-visible:ring-amber-500 rounded-lg p-1"
+          >
             <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shadow-sm">
               <Wrench className="w-4 h-4" />
             </div>
-            <span className="font-bold text-slate-900 text-sm">SolveBid</span>
+            <span className="font-bold text-slate-900 text-sm">
+              SolveBridge
+            </span>
           </Link>
           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200">
             Professional
@@ -89,22 +163,29 @@ export function ProfessionalLayout() {
             onClick={() => setIsAvailable(!isAvailable)}
             className={`w-full flex items-center justify-between p-2 rounded-lg border text-xs font-semibold transition-all ${
               isAvailable
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                : 'bg-slate-100 border-slate-200 text-slate-600'
+                ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                : "bg-slate-100 border-slate-200 text-slate-600"
             }`}
           >
             <span className="flex items-center gap-2">
-              <Radio className={`w-3.5 h-3.5 ${isAvailable ? 'text-emerald-600 animate-pulse' : 'text-slate-400'}`} />
-              <span>{isAvailable ? 'Available for Jobs' : 'Offline / Busy'}</span>
+              <Radio
+                className={`w-3.5 h-3.5 ${isAvailable ? "text-emerald-600 animate-pulse" : "text-slate-400"}`}
+              />
+              <span>
+                {isAvailable ? "Available for Jobs" : "Offline / Busy"}
+              </span>
             </span>
             <span className="text-[10px] uppercase font-bold tracking-wider">
-              {isAvailable ? 'Live' : 'Off'}
+              {isAvailable ? "Live" : "Off"}
             </span>
           </button>
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto" aria-label="Professional Sidebar">
+        <nav
+          className="flex-1 p-3 space-y-1 overflow-y-auto"
+          aria-label="Professional Sidebar"
+        >
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -113,12 +194,14 @@ export function ProfessionalLayout() {
                 to={item.path}
                 className={`flex items-center justify-between px-3 py-2 text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-amber-50 text-amber-900 font-semibold border-l-4 border-amber-600 rounded-r-lg'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg'
+                    ? "bg-amber-50 text-amber-900 font-semibold border-l-4 border-amber-600 rounded-r-lg"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className={isActive ? 'text-amber-600' : 'text-slate-400'}>
+                  <span
+                    className={isActive ? "text-amber-600" : "text-slate-400"}
+                  >
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
@@ -141,19 +224,13 @@ export function ProfessionalLayout() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
-                <p className="text-xs font-semibold text-slate-800 truncate">{displayName}</p>
-                {isVerified ? (
-                  <span title="Verified Professional">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  </span>
-                ) : (
-                  <span title="Unverified Professional">
-                    <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                  </span>
-                )}
+                <p className="text-xs font-semibold text-slate-800 truncate">
+                  Arun HVAC
+                </p>
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               </div>
               <p className="text-[10px] text-slate-500 truncate">
-                {isVerified ? 'Verified Partner' : 'Status: UNVERIFIED'}
+                ★ 4.8 (142 jobs)
               </p>
             </div>
           </div>
@@ -181,7 +258,11 @@ export function ProfessionalLayout() {
               className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg focus-visible:ring-2 focus-visible:ring-amber-500"
               aria-label="Toggle navigation menu"
             >
-              {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileSidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </button>
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-500" />

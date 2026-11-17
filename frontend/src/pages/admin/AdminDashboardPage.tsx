@@ -65,7 +65,7 @@ export function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Admin Title Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50/40 to-white border border-purple-200/90 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-linear-to-r from-purple-50 via-indigo-50/40 to-white border border-purple-200/90 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider">
             Governance & Analytics Console
@@ -88,7 +88,11 @@ export function AdminDashboardPage() {
             </Button>
           </Link>
           <Link to="/admin/audit-logs">
-            <Button variant="secondary" size="sm" leftIcon={<ScrollText className="w-3.5 h-3.5" />}>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<ScrollText className="w-3.5 h-3.5" />}
+            >
               Audit Logs
             </Button>
           </Link>
@@ -262,7 +266,7 @@ export function AdminDashboardPage() {
                       <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-white text-slate-700 border border-slate-200">
                         {disp.status}
                       </span>
-                      <span className="text-xs font-bold text-slate-900 truncate max-w-[200px]">
+                      <span className="text-xs font-bold text-slate-900 truncate max-w-50">
                         {disp.title}
                       </span>
                     </div>

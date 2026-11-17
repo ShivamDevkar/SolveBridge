@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent } from '@/components/ui/Card';
+import React, { useState, useEffect } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Card, CardContent } from "@/components/ui/Card";
 import {
   Search,
   ArrowRight,
@@ -15,30 +16,31 @@ import {
   Car,
   Laptop,
   Building2,
-} from 'lucide-react';
+} from "lucide-react";
 
 export function LandingPage() {
-  const [problemText, setProblemText] = useState('');
+  const [problemText, setProblemText] = useState("");
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   // Rotating realistic consumer problem examples
   const examplePrompts = [
-    'My AC is running but the room is not cooling...',
-    'There is a persistent leak under my kitchen sink...',
-    'Main circuit breaker trips whenever microwave turns on...',
-    'Washing machine drum fills with water but does not spin...',
-    'Laptop powers on with fan noise but display remains black...',
+    "My AC is running but the room is not cooling...",
+    "There is a persistent leak under my kitchen sink...",
+    "Main circuit breaker trips whenever microwave turns on...",
+    "Washing machine drum fills with water but does not spin...",
+    "Laptop powers on with fan noise but display remains black...",
   ];
   const [promptIndex, setPromptIndex] = useState(0);
   const [isReducedMotion, setIsReducedMotion] = useState(false);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setIsReducedMotion(mediaQuery.matches);
 
     const listener = (e: MediaQueryListEvent) => setIsReducedMotion(e.matches);
-    mediaQuery.addEventListener('change', listener);
-    return () => mediaQuery.removeEventListener('change', listener);
+    mediaQuery.addEventListener("change", listener);
+    return () => mediaQuery.removeEventListener("change", listener);
   }, []);
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function LandingPage() {
 
   const handleQuickPost = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/auth/login');
+    navigate("/auth/login");
   };
 
   const handleChipClick = (suggestion: string) => {
@@ -59,46 +61,94 @@ export function LandingPage() {
   };
 
   const quickSuggestions = [
-    { label: '❄️ AC Not Cooling', text: 'Split AC is running but blowing warm room air' },
-    { label: '💧 Sink Pipe Leak', text: 'Water pooling under kitchen sink cabinet' },
-    { label: '⚡ Breaker Tripping', text: 'Main circuit breaker trips under appliance load' },
-    { label: '🧺 Washer Drain Failure', text: 'Front-load washing machine not draining water' },
+    {
+      label: "❄️ AC Not Cooling",
+      text: "Split AC is running but blowing warm room air",
+    },
+    {
+      label: "💧 Sink Pipe Leak",
+      text: "Water pooling under kitchen sink cabinet",
+    },
+    {
+      label: "⚡ Breaker Tripping",
+      text: "Main circuit breaker trips under appliance load",
+    },
+    {
+      label: "🧺 Washer Drain Failure",
+      text: "Front-load washing machine not draining water",
+    },
   ];
 
   const serviceCategories = [
     {
-      id: 'home',
-      name: 'Home Appliances & HVAC',
-      desc: 'Air conditioning, refrigerator, washing machine, plumbing, wiring',
+      id: "home",
+      name: "Home Appliances & HVAC",
+      desc: "Air conditioning, refrigerator, washing machine, plumbing, wiring",
       icon: <Wind className="w-5 h-5 text-blue-600" />,
-      tag: 'Most Active',
-      examples: ['AC Gas Refill & Cooling', 'Water Purifier Service', 'Bathroom Leak Repair'],
+      tag: "Most Active",
+      examples: [
+        "AC Gas Refill & Cooling",
+        "Water Purifier Service",
+        "Bathroom Leak Repair",
+      ],
     },
     {
-      id: 'vehicle',
-      name: 'Vehicle & Roadside Breakdown',
-      desc: 'On-demand jumpstart, tire puncture, brake noise, roadside diagnosis',
+      id: "vehicle",
+      name: "Vehicle & Roadside Breakdown",
+      desc: "On-demand jumpstart, tire puncture, brake noise, roadside diagnosis",
       icon: <Car className="w-5 h-5 text-amber-600" />,
-      tag: 'On-Demand',
-      examples: ['Car Battery Dead', 'Flat Tire Assistance', 'Brake Fluid Check'],
+      tag: "On-Demand",
+      examples: [
+        "Car Battery Dead",
+        "Flat Tire Assistance",
+        "Brake Fluid Check",
+      ],
     },
     {
-      id: 'tech',
-      name: 'Tech Hardware & Networking',
-      desc: 'Laptop screen repair, WiFi mesh setup, router configuration, CCTV',
+      id: "tech",
+      name: "Tech Hardware & Networking",
+      desc: "Laptop screen repair, WiFi mesh setup, router configuration, CCTV",
       icon: <Laptop className="w-5 h-5 text-purple-600" />,
-      tag: 'Specialist',
-      examples: ['Laptop Display Replacement', 'Home Office WiFi Setup', 'CCTV Camera Offline'],
+      tag: "Specialist",
+      examples: [
+        "Laptop Display Replacement",
+        "Home Office WiFi Setup",
+        "CCTV Camera Offline",
+      ],
     },
     {
-      id: 'commercial',
-      name: 'Commercial & Facility',
-      desc: 'Restaurant refrigeration, office HVAC, generator maintenance, lighting',
+      id: "commercial",
+      name: "Commercial & Facility",
+      desc: "Restaurant refrigeration, office HVAC, generator maintenance, lighting",
       icon: <Building2 className="w-5 h-5 text-emerald-600" />,
-      tag: 'Business',
-      examples: ['Commercial Freezer Service', 'Office LED Troffer Repair', 'Exhaust Fan Overhaul'],
+      tag: "Business",
+      examples: [
+        "Commercial Freezer Service",
+        "Office LED Troffer Repair",
+        "Exhaust Fan Overhaul",
+      ],
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center text-sm text-slate-500">
+        Restoring your session...
+      </div>
+    );
+  }
+
+  if (user) {
+    const role = user.user_metadata?.role;
+    const dashboardPath =
+      role === "PROFESSIONAL"
+        ? "/pro/dashboard"
+        : role === "ADMIN"
+          ? "/admin/dashboard"
+          : "/customer/dashboard";
+
+    return <Navigate to={dashboardPath} replace />;
+  }
 
   return (
     <div className="space-y-16 sm:space-y-24 py-8 sm:py-16">
@@ -112,16 +162,20 @@ export function LandingPage() {
 
         {/* Main Heading */}
         <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-          Describe the problem.<br />
-          <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          Describe the problem.
+          <br />
+          <span className="bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Compare the solutions.
-          </span><br />
+          </span>
+          <br />
           Get it solved.
         </h1>
 
         <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
-          Skip calling dozens of unverified technicians with unpredictable rates. Tell us what is wrong in plain words.
-          Nearby verified professionals examine your symptoms and submit transparent, fixed-scope proposals.
+          Skip calling dozens of unverified technicians with unpredictable
+          rates. Tell us what is wrong in plain words. Nearby verified
+          professionals examine your symptoms and submit transparent,
+          fixed-scope proposals.
         </p>
 
         {/* Interactive Problem Search Bar (Consumer-focused) */}
@@ -131,14 +185,17 @@ export function LandingPage() {
             className="p-2 sm:p-2.5 bg-white border-2 border-slate-200 hover:border-blue-400 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100 rounded-2xl shadow-elevated transition-all flex flex-col sm:flex-row items-center gap-2"
           >
             <div className="relative flex-1 w-full flex items-center pl-2 sm:pl-3">
-              <Search className="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true" />
+              <Search
+                className="w-5 h-5 text-slate-400 shrink-0"
+                aria-hidden="true"
+              />
               <input
                 type="text"
                 value={problemText}
                 onChange={(e) => setProblemText(e.target.value)}
                 placeholder={
                   isReducedMotion
-                    ? 'Describe your problem in plain words...'
+                    ? "Describe your problem in plain words..."
                     : examplePrompts[promptIndex]
                 }
                 className="w-full bg-transparent text-sm sm:text-base text-slate-900 placeholder:text-slate-400 px-3 py-2 focus:outline-none font-medium"
@@ -192,16 +249,18 @@ export function LandingPage() {
 
       {/* 2. Core Value Differentiator: Side-by-Side Proposal Comparison Preview */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-b from-blue-50/60 to-white border border-blue-200/80 rounded-3xl p-6 sm:p-10 shadow-sm space-y-8">
+        <div className="bg-linear-to-b from-blue-50/60 to-white border border-blue-200/80 rounded-3xl p-6 sm:p-10 shadow-sm space-y-8">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider">
-              Why SolveBid is Different
+              Why SolveBridge is Different
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
               Compare complete solutions, not just telephone estimates
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed">
-              When you post a problem, nearby verified professionals examine your photos and symptoms, then submit transparent proposals specifying diagnostic approach, price, and earliest visit.
+              When you post a problem, nearby verified professionals examine
+              your photos and symptoms, then submit transparent proposals
+              specifying diagnostic approach, price, and earliest visit.
             </p>
           </div>
 
@@ -215,15 +274,21 @@ export function LandingPage() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base">Arun HVAC Services</h3>
+                    <h3 className="font-bold text-slate-900 text-base">
+                      Arun HVAC Services
+                    </h3>
                     <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                       <strong>4.8</strong> (142 verified jobs) • 2.1 km away
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Proposed Price</span>
-                    <span className="text-2xl font-extrabold text-slate-900 font-mono">₹900</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                      Proposed Price
+                    </span>
+                    <span className="text-2xl font-extrabold text-slate-900 font-mono">
+                      ₹900
+                    </span>
                   </div>
                 </div>
 
@@ -233,16 +298,21 @@ export function LandingPage() {
                     <span>Diagnosis & Action Plan</span>
                   </div>
                   <p className="text-slate-600 leading-relaxed text-[11px]">
-                    "Examine condenser coil pressure, inspect starting capacitor, flush drainage tray, and top up R32 gas if below 120 PSI."
+                    "Examine condenser coil pressure, inspect starting
+                    capacitor, flush drainage tray, and top up R32 gas if below
+                    120 PSI."
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    Earliest Arrival: <strong className="text-slate-800">Today, 4:30 PM</strong>
+                    Earliest Arrival:{" "}
+                    <strong className="text-slate-800">Today, 4:30 PM</strong>
                   </span>
-                  <span className="text-emerald-700 font-medium">Coil inspection included</span>
+                  <span className="text-emerald-700 font-medium">
+                    Coil inspection included
+                  </span>
                 </div>
               </div>
 
@@ -261,15 +331,21 @@ export function LandingPage() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base">CoolPro Climate Care</h3>
+                    <h3 className="font-bold text-slate-900 text-base">
+                      CoolPro Climate Care
+                    </h3>
                     <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                       <strong>4.9</strong> (89 verified jobs) • 3.5 km away
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Proposed Price</span>
-                    <span className="text-2xl font-extrabold text-slate-900 font-mono">₹1,150</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                      Proposed Price
+                    </span>
+                    <span className="text-2xl font-extrabold text-slate-900 font-mono">
+                      ₹1,150
+                    </span>
                   </div>
                 </div>
 
@@ -279,14 +355,19 @@ export function LandingPage() {
                     <span>Diagnosis & Action Plan</span>
                   </div>
                   <p className="text-slate-600 leading-relaxed text-[11px]">
-                    "Chemical indoor jet flush, electronic blower check, refrigerant leak sniff test, and airflow thermal delta measurement."
+                    "Chemical indoor jet flush, electronic blower check,
+                    refrigerant leak sniff test, and airflow thermal delta
+                    measurement."
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    Earliest Arrival: <strong className="text-slate-800">Tomorrow, 10:00 AM</strong>
+                    Earliest Arrival:{" "}
+                    <strong className="text-slate-800">
+                      Tomorrow, 10:00 AM
+                    </strong>
                   </span>
                   <span className="text-slate-500">Chemical service</span>
                 </div>
@@ -295,7 +376,11 @@ export function LandingPage() {
               <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
                 <Badge variant="verified" />
                 <Link to="/auth/login">
-                  <Button variant="secondary" size="sm" className="font-semibold">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="font-semibold"
+                  >
                     Select This Solution
                   </Button>
                 </Link>
@@ -311,9 +396,12 @@ export function LandingPage() {
           <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">
             Clear, Governed Workflow
           </span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">How SolveBid Works</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            How SolveBridge Works
+          </h2>
           <p className="text-sm text-slate-600 max-w-xl mx-auto">
-            From the moment your issue begins until you confirm satisfactory completion
+            From the moment your issue begins until you confirm satisfactory
+            completion
           </p>
         </div>
 
@@ -323,9 +411,12 @@ export function LandingPage() {
               <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center">
                 1
               </div>
-              <h3 className="font-bold text-slate-900 text-base">Describe Symptoms</h3>
+              <h3 className="font-bold text-slate-900 text-base">
+                Describe Symptoms
+              </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Post your issue in plain words with photos, urgency level, and preferred service window. Exact address is masked for discovery.
+                Post your issue in plain words with photos, urgency level, and
+                preferred service window. Exact address is masked for discovery.
               </p>
             </CardContent>
           </Card>
@@ -335,9 +426,13 @@ export function LandingPage() {
               <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 font-bold text-sm flex items-center justify-center">
                 2
               </div>
-              <h3 className="font-bold text-slate-900 text-base">Explainable Matching</h3>
+              <h3 className="font-bold text-slate-900 text-base">
+                Explainable Matching
+              </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Our engine immediately notifies nearby verified technicians based on matched skills, service radius, and real-time availability.
+                Our engine immediately notifies nearby verified technicians
+                based on matched skills, service radius, and real-time
+                availability.
               </p>
             </CardContent>
           </Card>
@@ -347,9 +442,13 @@ export function LandingPage() {
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 font-bold text-sm flex items-center justify-center">
                 3
               </div>
-              <h3 className="font-bold text-slate-900 text-base">Compare Proposals</h3>
+              <h3 className="font-bold text-slate-900 text-base">
+                Compare Proposals
+              </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Compare price, diagnostic approach, earliest arrival time, and verified ratings side-by-side. Choose the solution that fits best.
+                Compare price, diagnostic approach, earliest arrival time, and
+                verified ratings side-by-side. Choose the solution that fits
+                best.
               </p>
             </CardContent>
           </Card>
@@ -359,9 +458,12 @@ export function LandingPage() {
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-sm flex items-center justify-center">
                 4
               </div>
-              <h3 className="font-bold text-slate-900 text-base">Governed Workspace</h3>
+              <h3 className="font-bold text-slate-900 text-base">
+                Governed Workspace
+              </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Track job lifecycle milestones, approve price amendments before work begins, and confirm satisfactory completion before closure.
+                Track job lifecycle milestones, approve price amendments before
+                work begins, and confirm satisfactory completion before closure.
               </p>
             </CardContent>
           </Card>
@@ -372,10 +474,17 @@ export function LandingPage() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Supported Problem Categories</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Explore common service domains supported by verified professionals</p>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Supported Problem Categories
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Explore common service domains supported by verified professionals
+            </p>
           </div>
-          <Link to="/about" className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+          <Link
+            to="/about"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+          >
             Explore All in About →
           </Link>
         </div>
@@ -406,7 +515,9 @@ export function LandingPage() {
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Typical Issues:</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">
+                    Typical Issues:
+                  </span>
                   <ul className="text-[11px] text-slate-600 space-y-0.5">
                     {cat.examples.map((ex, i) => (
                       <li key={i} className="flex items-center gap-1.5">
@@ -420,7 +531,11 @@ export function LandingPage() {
 
               <div className="pt-4 mt-3">
                 <Link to="/auth/login">
-                  <Button variant="outline" size="sm" className="w-full text-xs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                  >
                     Get Started
                   </Button>
                 </Link>

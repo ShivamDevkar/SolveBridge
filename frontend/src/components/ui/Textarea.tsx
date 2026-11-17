@@ -1,9 +1,8 @@
-import React, { forwardRef, useId } from 'react';
-import { cn } from '@/lib/utils';
-import { AlertCircle } from 'lucide-react';
+import React, { forwardRef, useId } from "react";
+import { cn } from "@/lib/utils";
+import { AlertCircle } from "lucide-react";
 
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   helperText?: string;
   error?: string;
@@ -24,7 +23,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       disabled,
       ...props
     },
-    ref
+    ref,
   ) => {
     const generatedId = useId();
     const textareaId = id || generatedId;
@@ -32,7 +31,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const helperId = `${textareaId}-helper`;
 
     const limit = maxChars || maxLength;
-    const currentLength = typeof value === 'string' ? value.length : 0;
+    const currentLength = typeof value === "string" ? value.length : 0;
 
     return (
       <div className="w-full flex flex-col gap-1.5">
@@ -61,11 +60,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : helperText ? helperId : undefined}
           className={cn(
-            'w-full bg-white text-slate-900 placeholder:text-slate-400 rounded-lg p-3 text-sm border transition-colors duration-150 min-h-[96px] resize-y',
-            'border-slate-300 focus:border-blue-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-100',
-            'disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed',
-            error && 'border-red-500 focus:border-red-600 focus-visible:ring-red-100',
-            className
+            "w-full bg-white text-slate-900 placeholder:text-slate-400 rounded-lg p-3 text-sm border transition-colors duration-150 min-h-24 resize-y",
+            "border-slate-300 focus:border-blue-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-100",
+            "disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed",
+            error &&
+              "border-red-500 focus:border-red-600 focus-visible:ring-red-100",
+            className,
           )}
           {...props}
         />
@@ -85,7 +85,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         ) : null}
       </div>
     );
-  }
+  },
 );
 
-Textarea.displayName = 'Textarea';
+Textarea.displayName = "Textarea";

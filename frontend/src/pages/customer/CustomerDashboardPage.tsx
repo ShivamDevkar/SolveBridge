@@ -112,7 +112,7 @@ export function CustomerDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/40 to-white border border-blue-200/90 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-linear-to-r from-blue-50 via-indigo-50/40 to-white border border-blue-200/90 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
             Customer Portal Hub
@@ -133,7 +133,11 @@ export function CustomerDashboardPage() {
           </p>
         </div>
         <Link to="/customer/problems/new">
-          <Button variant="primary" size="sm" leftIcon={<PlusCircle className="w-4 h-4" />}>
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<PlusCircle className="w-4 h-4" />}
+          >
             Post a New Problem
           </Button>
         </Link>
@@ -198,7 +202,6 @@ export function CustomerDashboardPage() {
         </Card>
       </div>
 
-      {/* Active Problems Feed */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -298,3 +301,4 @@ export function CustomerDashboardPage() {
     </div>
   );
 }
+

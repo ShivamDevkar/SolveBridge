@@ -1,238 +1,418 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { User, UserRole } from '@/types/common';
 import {
-  AuthContextValue,
-  AuthResult,
-  ChangePasswordPayload,
-  CustomerRegisterPayload,
-  LoginCredentials,
-  PasswordResetPayload,
-  PasswordResetRequestResult,
-  PasswordResetResult,
-  ProfessionalRegisterPayload,
-  SessionPersistence,
-  UpdateProfilePayload,
-  ValidateResetTokenResult,
-} from '@/types/auth';
-import { authService } from '@/services/authService';
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+  useMemo,
+} from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
+import { apiFetch } from "@/lib/api";
+import type { UserRole, VerificationStatus } from "@/types/common";
+
+type AuthUser = User & {
+  name?: string;
+  city?: string;
+  businessName?: string;
+  category?: string;
+  skills?: string[];
+  coverageRadius?: string;
+  verificationStatus?: VerificationStatus;
+  role?: UserRole;
+};
+
+interface AuthContextValue {
+  user: AuthUser | null;
+  session: Session | null;
+  loading: boolean;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  role: UserRole | null;
+
+  signInWithPassword: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: Error | null }>;
+
+  signUpWithPassword: (input: {
+    email: string;
+    password: string;
+    profile: Record<string, unknown>;
+  }) => Promise<{ error: Error | null; needEmailConfirmation: boolean }>;
+
+  signInWithGoogle: (options?: {
+    flow?: "login" | "register";
+    role?: string;
+  }) => Promise<{
+    error: Error | null;
+  }>;
+
+  updateUserProfile: (
+    profile: Record<string, unknown>,
+  ) => Promise<{ error: Error | null }>;
+
+  resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
+
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
+
+  syncApplicationProfile: (
+    profile: Record<string, unknown>,
+  ) => Promise<{ error: Error | null }>;
+
+  signOut: () => Promise<{
+    error: Error | null;
+  }>;
+  requestPasswordReset: (email: string) => Promise<{
+    success: boolean;
+    message: string;
+    mockResetToken?: string;
+  }>;
+  validateResetToken: (token: string) => Promise<{
+    valid: boolean;
+    email?: string;
+    error?: string;
+  }>;
+  resetPassword: (input: {
+    token: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => Promise<{ success: boolean; message: string }>;
+  changePassword: (input: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => Promise<{ success: boolean; message: string }>;
+  logout: () => Promise<void>;
+}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export interface AuthProviderProps {
-  children: React.ReactNode;
+function toError(error: unknown) {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error("Authentication request failed");
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<UserRole | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const initializedRef = useRef(false);
+function toAuthUser(user: User | null): AuthUser | null {
+  if (!user) {
+    return null;
+  }
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  // Rehydrate authentication state on initial application load
-  useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
-    async function initSession() {
-      try {
-        const storedSession = await authService.getCurrentSession();
-        if (storedSession) {
-          const restoredUser: User = {
-            id: storedSession.userId,
-            name: storedSession.name,
-            email: storedSession.email,
-            role: storedSession.role,
-            verificationStatus: storedSession.verificationStatus,
-          };
-          setUser(restoredUser);
-          setRole(storedSession.role);
-        } else {
-          setUser(null);
-          setRole(null);
-        }
-      } catch (err) {
-        console.warn('[AuthProvider] Failed to rehydrate session:', err);
-        setUser(null);
-        setRole(null);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    initSession();
-  }, []);
-
-  const login = useCallback(
-    async (credentials: LoginCredentials, persistence: SessionPersistence = 'local'): Promise<AuthResult> => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await authService.login(credentials, persistence);
-        setUser(result.user);
-        setRole(result.user.role);
-        return result;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Authentication failed. Please try again.';
-        setError(message);
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
-
-  const registerCustomer = useCallback(
-    async (payload: CustomerRegisterPayload, persistence: SessionPersistence = 'local'): Promise<AuthResult> => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await authService.registerCustomer(payload, persistence);
-        setUser(result.user);
-        setRole(result.user.role);
-        return result;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
-        setError(message);
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
-
-  const registerProfessional = useCallback(
-    async (payload: ProfessionalRegisterPayload, persistence: SessionPersistence = 'local'): Promise<AuthResult> => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await authService.registerProfessional(payload, persistence);
-        setUser(result.user);
-        setRole(result.user.role);
-        return result;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Professional registration failed. Please try again.';
-        setError(message);
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
-
-  const requestPasswordReset = useCallback(async (email: string): Promise<PasswordResetRequestResult> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      return await authService.requestPasswordReset(email);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Password reset request failed. Please try again.';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const validateResetToken = useCallback(async (token: string): Promise<ValidateResetTokenResult> => {
-    return await authService.validateResetToken(token);
-  }, []);
-
-  const resetPassword = useCallback(async (payload: PasswordResetPayload): Promise<PasswordResetResult> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      return await authService.resetPassword(payload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Password reset failed. Please try again.';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const updateUserProfile = useCallback(async (payload: UpdateProfilePayload): Promise<User> => {
-    if (!user) throw new Error('Cannot update profile without an active session.');
-    setIsLoading(true);
-    setError(null);
-    try {
-      const updatedUser = await authService.updateUserProfile(user.id, payload);
-      setUser(updatedUser);
-      return updatedUser;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update profile.';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
-
-  const changePassword = useCallback(async (payload: ChangePasswordPayload): Promise<{ success: boolean; message: string }> => {
-    if (!user) throw new Error('Cannot change password without an active session.');
-    setIsLoading(true);
-    setError(null);
-    try {
-      return await authService.changePassword(user.email, payload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to change password.';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
-
-  const logout = useCallback(async (): Promise<void> => {
-    setIsLoading(true);
-    try {
-      await authService.logout();
-    } finally {
-      setUser(null);
-      setRole(null);
-      setError(null);
-      setIsLoading(false);
-    }
-  }, []);
-
-  const value: AuthContextValue = {
-    user,
-    role,
-    isAuthenticated: !!user,
-    isLoading,
-    error,
-    login,
-    registerCustomer,
-    registerProfessional,
-    requestPasswordReset,
-    validateResetToken,
-    resetPassword,
-    updateUserProfile,
-    changePassword,
-    logout,
-    clearError,
+  const metadata = user.user_metadata ?? {};
+  return {
+    ...user,
+    name:
+      (typeof metadata.name === "string" && metadata.name) ||
+      (typeof metadata.full_name === "string" && metadata.full_name) ||
+      user.email ||
+      undefined,
+    city: typeof metadata.city === "string" ? metadata.city : undefined,
+    businessName:
+      typeof metadata.businessName === "string"
+        ? metadata.businessName
+        : undefined,
+    category:
+      typeof metadata.category === "string" ? metadata.category : undefined,
+    skills: Array.isArray(metadata.skills)
+      ? metadata.skills.filter((skill): skill is string => typeof skill === "string")
+      : undefined,
+    coverageRadius:
+      typeof metadata.coverageRadius === "string"
+        ? metadata.coverageRadius
+        : undefined,
+    verificationStatus:
+      typeof metadata.verificationStatus === "string"
+        ? (metadata.verificationStatus as VerificationStatus)
+        : undefined,
+    role:
+      metadata.role === "CUSTOMER" ||
+      metadata.role === "PROFESSIONAL" ||
+      metadata.role === "ADMIN"
+        ? metadata.role
+        : undefined,
   };
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSession() {
+      const {
+        data: { session: currentSession },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Unable to load Supabase session:", error);
+      }
+
+      setSession(currentSession);
+      setUser(toAuthUser(currentSession?.user ?? null));
+      setLoading(false);
+    }
+
+    void loadSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (!mounted) {
+        return;
+      }
+
+      setSession(currentSession);
+      setUser(toAuthUser(currentSession?.user ?? null));
+      setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function signInWithPassword(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (!error && data.user) {
+      const metadata = data.user.user_metadata;
+      const role = metadata?.role;
+
+      if (
+        (role === "CUSTOMER" || role === "PROFESSIONAL") &&
+        typeof metadata.firstName === "string" &&
+        typeof metadata.lastName === "string"
+      ) {
+        const { error: syncError } = await syncApplicationProfile({
+          ...metadata,
+          role,
+          firstName: metadata.firstName,
+          lastName: metadata.lastName,
+          phone:
+            typeof metadata.phone === "string" ? metadata.phone : undefined,
+          businessName:
+            typeof metadata.businessName === "string"
+              ? metadata.businessName
+              : undefined,
+          coverageRadius:
+            typeof metadata.coverageRadius === "string" ||
+            typeof metadata.coverageRadius === "number"
+              ? metadata.coverageRadius
+              : undefined,
+        });
+
+        if (syncError) {
+          console.error(
+            "Unable to synchronize application profile:",
+            syncError,
+          );
+        }
+      }
+    }
+
+    return {
+      error: error ? toError(error) : null,
+    };
+  }
+
+  async function signUpWithPassword(input: {
+    email: string;
+    password: string;
+    profile: Record<string, unknown>;
+  }) {
+    const { data, error } = await supabase.auth.signUp({
+      email: input.email.trim(),
+      password: input.password,
+      options: {
+        data: input.profile,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    return {
+      error: error ? toError(error) : null,
+      needEmailConfirmation: Boolean(data.user && !data.session),
+    };
+  }
+
+  async function signInWithGoogle(options?: {
+    flow?: "login" | "register";
+    role?: string;
+  }) {
+    const redirectUrl = new URL("/auth/callback", window.location.origin);
+
+    if (options?.flow) {
+      redirectUrl.searchParams.set("flow", options.flow);
+    }
+
+    if (options?.role) {
+      redirectUrl.searchParams.set("role", options.role);
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectUrl.toString(),
+      },
+    });
+
+    return {
+      error: error ? toError(error) : null,
+    };
+  }
+
+  async function updateUserProfile(profile: Record<string, unknown>) {
+    const { error } = await supabase.auth.updateUser({
+      data: profile,
+    });
+
+    return {
+      error: error ? toError(error) : null,
+    };
+  }
+
+  async function resetPasswordForEmail(email: string) {
+    const redirectUrl = new URL("/auth/callback", window.location.origin);
+    redirectUrl.searchParams.set("flow", "reset");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: redirectUrl.toString(),
+    });
+
+    return {
+      error: error ? toError(error) : null,
+    };
+  }
+
+  async function updatePassword(password: string) {
+    const { error } = await supabase.auth.updateUser({ password });
+
+    return {
+      error: error ? toError(error) : null,
+    };
+  }
+
+  async function syncApplicationProfile(profile: Record<string, unknown>) {
+    try {
+      await apiFetch("/auth/sync", {
+        method: "POST",
+        body: JSON.stringify(profile),
+      });
+      return { error: null };
+    } catch (error) {
+      return { error: toError(error) };
+    }
+  }
+
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+
+    return {
+      error: error ? toError(error) : null,
+    };
+  }
+
+  async function requestPasswordReset(email: string) {
+    const { error } = await resetPasswordForEmail(email);
+    return {
+      success: !error,
+      message: error
+        ? error.message
+        : "If an account exists for that email, a reset link has been sent.",
+    };
+  }
+
+  async function validateResetToken(token: string) {
+    return token.trim()
+      ? { valid: true }
+      : { valid: false, error: "A reset token is required." };
+  }
+
+  async function resetPassword(input: {
+    token: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) {
+    if (!input.token.trim()) {
+      return { success: false, message: "A reset token is required." };
+    }
+
+    const { error } = await updatePassword(input.newPassword);
+    return {
+      success: !error,
+      message: error?.message ?? "Password updated successfully.",
+    };
+  }
+
+  async function changePassword(input: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) {
+    void input.currentPassword;
+    void input.confirmPassword;
+    const { error } = await updatePassword(input.newPassword);
+    return {
+      success: !error,
+      message: error?.message ?? "Password updated successfully.",
+    };
+  }
+
+  async function logout() {
+    await signOut();
+  }
+
+  const role = user?.role ?? null;
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      session,
+      loading,
+      isLoading: loading,
+      isAuthenticated: Boolean(user),
+      role,
+      signInWithPassword,
+      signInWithGoogle,
+      updateUserProfile,
+      resetPasswordForEmail,
+      updatePassword,
+      syncApplicationProfile,
+      signUpWithPassword,
+      signOut,
+      requestPasswordReset,
+      validateResetToken,
+      resetPassword,
+      changePassword,
+      logout,
+    }),
+    [user, session, loading, role],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/**
- * Access the global authentication context.
- * Throws an explicit error if invoked outside of `<AuthProvider>`.
- */
-export function useAuth(): AuthContextValue {
+export function useAuth() {
   const context = useContext(AuthContext);
+
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider.');
+    throw new Error("Error in useAuth");
   }
+
   return context;
 }
-

@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useState } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -18,47 +17,124 @@ import {
   X,
   LogOut,
   Bell,
-} from 'lucide-react';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
+  ExternalLink,
+} from "lucide-react";
+import { DropdownMenu } from "@/components/ui/DropdownMenu";
+import { useAuth } from "@/context/AuthContext";
 
 export function AdminLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
+  const { signOut, user } = useAuth();
+  const displayName =
+    (typeof user?.user_metadata?.name === "string" && user.user_metadata.name) ||
+    (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
+    user?.email ||
+    "System Admin";
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
   const handleLogout = async () => {
-    await logout();
-    navigate('/auth/login', { replace: true });
+    const { error } = await signOut();
+    if (!error) {
+      window.location.href = "/auth/login";
+    }
   };
 
-  const displayName = user?.name || 'System Administrator';
-  const initials =
-    displayName
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((n) => n[0].toUpperCase())
-      .join('') || 'AD';
-
   const navItems = [
-    { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { label: 'Professionals Directory', path: '/admin/professionals', icon: <Users className="w-4 h-4" /> },
-    { label: 'Verification Queue', path: '/admin/verification', icon: <ShieldCheck className="w-4 h-4" />, alert: '3' },
-    { label: 'Problems Oversight', path: '/admin/problems', icon: <FileQuestion className="w-4 h-4" /> },
-    { label: 'Jobs Monitor', path: '/admin/jobs', icon: <Briefcase className="w-4 h-4" /> },
-    { label: 'Disputes Center', path: '/admin/disputes', icon: <ShieldAlert className="w-4 h-4" />, alert: '1' },
-    { label: 'Categories & Skills', path: '/admin/categories', icon: <FolderTree className="w-4 h-4" /> },
-    { label: 'User Directory', path: '/admin/users', icon: <Users className="w-4 h-4" /> },
-    { label: 'Content Reports', path: '/admin/reports', icon: <Flag className="w-4 h-4" /> },
-    { label: 'Market Analytics', path: '/admin/analytics', icon: <BarChart3 className="w-4 h-4" /> },
-    { label: 'Audit Logs', path: '/admin/audit-logs', icon: <ScrollText className="w-4 h-4" /> },
-    { label: 'Platform Settings', path: '/admin/settings', icon: <Settings className="w-4 h-4" /> },
+    {
+      label: "Dashboard",
+      path: "/admin/dashboard",
+      icon: <LayoutDashboard className="w-4 h-4" />,
+    },
+    {
+      label: "Professionals Directory",
+      path: "/admin/professionals",
+      icon: <Users className="w-4 h-4" />,
+    },
+    {
+      label: "Verification Queue",
+      path: "/admin/verification",
+      icon: <ShieldCheck className="w-4 h-4" />,
+      alert: "3",
+    },
+    {
+      label: "Problems Oversight",
+      path: "/admin/problems",
+      icon: <FileQuestion className="w-4 h-4" />,
+    },
+    {
+      label: "Jobs Monitor",
+      path: "/admin/jobs",
+      icon: <Briefcase className="w-4 h-4" />,
+    },
+    {
+      label: "Disputes Center",
+      path: "/admin/disputes",
+      icon: <ShieldAlert className="w-4 h-4" />,
+      alert: "1",
+    },
+    {
+      label: "Categories & Skills",
+      path: "/admin/categories",
+      icon: <FolderTree className="w-4 h-4" />,
+    },
+    {
+      label: "User Directory",
+      path: "/admin/users",
+      icon: <Users className="w-4 h-4" />,
+    },
+    {
+      label: "Content Reports",
+      path: "/admin/reports",
+      icon: <Flag className="w-4 h-4" />,
+    },
+    {
+      label: "Market Analytics",
+      path: "/admin/analytics",
+      icon: <BarChart3 className="w-4 h-4" />,
+    },
+    {
+      label: "Audit Logs",
+      path: "/admin/audit-logs",
+      icon: <ScrollText className="w-4 h-4" />,
+    },
+    {
+      label: "Platform Settings",
+      path: "/admin/settings",
+      icon: <Settings className="w-4 h-4" />,
+    },
   ];
 
   const adminMenuItems = [
-    { id: '1', label: 'Platform Settings', icon: <Settings className="w-4 h-4" />, onClick: () => navigate('/admin/settings') },
-    { id: '2', label: 'Sign Out', icon: <LogOut className="w-4 h-4" />, variant: 'danger' as const, onClick: handleLogout },
+    {
+      id: "1",
+      label: "Admin Security",
+      icon: <Settings className="w-4 h-4" />,
+      onClick: () => alert("Admin Security"),
+    },
+    {
+      id: "2",
+      label: "Customer Portal Preview",
+      icon: <ExternalLink className="w-4 h-4" />,
+      onClick: () => (window.location.href = "/customer/dashboard"),
+    },
+    {
+      id: "3",
+      label: "Sign Out",
+      icon: <LogOut className="w-4 h-4" />,
+      variant: "danger" as const,
+      onClick: () => {
+        void signOut().then(({ error }) => {
+          if (!error) {
+            window.location.href = "/auth/login";
+          }
+        });
+      },
+    },
   ];
 
   return (
@@ -67,11 +143,16 @@ export function AdminLayout() {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 shrink-0 select-none shadow-xs">
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100">
-          <Link to="/" className="flex items-center gap-2 group focus-visible:ring-2 focus-visible:ring-purple-500 rounded-lg p-1">
+          <Link
+            to="/"
+            className="flex items-center gap-2 group focus-visible:ring-2 focus-visible:ring-purple-500 rounded-lg p-1"
+          >
             <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center text-white shadow-sm">
               <Wrench className="w-4 h-4" />
             </div>
-            <span className="font-bold text-slate-900 text-sm">SolveBid</span>
+            <span className="font-bold text-slate-900 text-sm">
+              SolveBridge
+            </span>
           </Link>
           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-50 text-purple-700 border border-purple-200">
             Admin
@@ -89,7 +170,10 @@ export function AdminLayout() {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto" aria-label="Admin Navigation">
+        <nav
+          className="flex-1 p-3 space-y-0.5 overflow-y-auto"
+          aria-label="Admin Navigation"
+        >
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -98,12 +182,14 @@ export function AdminLayout() {
                 to={item.path}
                 className={`flex items-center justify-between px-3 py-1.5 text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-purple-50 text-purple-900 font-semibold border-l-4 border-purple-600 rounded-r-lg'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg'
+                    ? "bg-purple-50 text-purple-900 font-semibold border-l-4 border-purple-600 rounded-r-lg"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg"
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
-                  <span className={isActive ? 'text-purple-600' : 'text-slate-400'}>
+                  <span
+                    className={isActive ? "text-purple-600" : "text-slate-400"}
+                  >
                     {item.icon}
                   </span>
                   <span className="truncate">{item.label}</span>
@@ -125,8 +211,12 @@ export function AdminLayout() {
               {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-800 truncate">{displayName}</p>
-              <p className="text-[10px] text-purple-700 font-mono truncate">Governance Role</p>
+              <p className="text-xs font-semibold text-slate-800 truncate">
+                System Admin
+              </p>
+              <p className="text-[10px] text-purple-700 font-mono truncate">
+                Governance Role
+              </p>
             </div>
           </div>
           <DropdownMenu
@@ -153,7 +243,11 @@ export function AdminLayout() {
               className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg focus-visible:ring-2 focus-visible:ring-purple-500"
               aria-label="Toggle navigation menu"
             >
-              {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileSidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </button>
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-purple-600" />

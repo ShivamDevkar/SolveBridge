@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 // Layouts
 import { PublicLayout } from '@/layouts/PublicLayout';
@@ -10,8 +10,8 @@ import { AdminLayout } from '@/layouts/AdminLayout';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
 // Public Pages
-import { LandingPage } from '@/pages/public/LandingPage';
-import { AboutPage, PublicProProfilePage } from '@/pages/public/AboutPage';
+import { LandingPage } from "@/pages/public/LandingPage";
+import { AboutPage, PublicProProfilePage } from "@/pages/public/AboutPage";
 
 // Auth Pages
 import { LoginPage } from '@/pages/auth/LoginPage';
@@ -20,7 +20,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 
 // Customer Pages
-import { CustomerDashboardPage } from '@/pages/customer/CustomerDashboardPage';
+import { CustomerDashboardPage } from "@/pages/customer/CustomerDashboardPage";
 import {
   CreateProblemPage,
   CustomerProblemsListPage,
@@ -32,7 +32,7 @@ import {
   CustomerNotificationsPage,
   CustomerProfilePage,
   CustomerSettingsPage,
-} from '@/pages/customer/CustomerProblemPages';
+} from "@/pages/customer/CustomerProblemPages";
 
 // Professional Pages
 import { ProDashboardPage } from '@/pages/professional/ProDashboardPage';
@@ -49,7 +49,7 @@ import {
   ProProfileEditPage,
   ProVerificationPage,
   ProSettingsPage,
-} from '@/pages/professional/ProPages';
+} from "@/pages/professional/ProPages";
 
 // Job Workspace Pages
 import {
@@ -59,10 +59,10 @@ import {
   JobCompletionPage,
   JobReviewPage,
   JobDisputePage,
-} from '@/pages/job/JobWorkspacePages';
+} from "@/pages/job/JobWorkspacePages";
 
 // Admin Console Pages
-import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage';
+import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
 import {
   AdminProfessionalsListPage,
   AdminVerificationQueuePage,
@@ -77,33 +77,35 @@ import {
   AdminAnalyticsPage,
   AdminAuditLogsPage,
   AdminSettingsPage,
-} from '@/pages/admin/AdminPages';
+} from "@/pages/admin/AdminPages";
 
 // 404
-import { NotFoundPage } from '@/pages/NotFoundPage';
+import { NotFoundPage } from "@/pages/NotFoundPage";
+import { AuthCallbackPage } from "@/pages/auth/AuthCallBackPage";
 
 export const router = createBrowserRouter([
   // 1. Public Marketing Routes
   {
-    path: '/',
+    path: "/",
     element: <PublicLayout />,
     children: [
       { index: true, element: <LandingPage /> },
-      { path: 'about', element: <AboutPage /> },
-      { path: 'professionals/:proId', element: <PublicProProfilePage /> },
+      { path: "about", element: <AboutPage /> },
+      { path: "professionals/:proId", element: <PublicProProfilePage /> },
     ],
   },
 
   // 2. Authentication Routes
   {
-    path: '/auth',
+    path: "/auth",
     element: <AuthLayout />,
     children: [
       { index: true, element: <Navigate to="/auth/login" replace /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'register', element: <RegisterPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'reset-password', element: <ResetPasswordPage /> },
+      { path: "login", element: <LoginPage /> },
+      { path: "register", element: <RegisterPage /> },
+      { path: "callback", element: <AuthCallbackPage /> },
+      { path: "forgot-password", element: <ForgotPasswordPage /> },
+      { path: "reset-password", element: <ResetPasswordPage /> },
     ],
   },
 
@@ -117,17 +119,20 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Navigate to="/customer/dashboard" replace /> },
-      { path: 'dashboard', element: <CustomerDashboardPage /> },
-      { path: 'problems/new', element: <CreateProblemPage /> },
-      { path: 'problems', element: <CustomerProblemsListPage /> },
-      { path: 'problems/:problemId', element: <CustomerProblemDetailPage /> },
-      { path: 'problems/:problemId/compare', element: <ProposalComparisonPage /> },
-      { path: 'jobs', element: <CustomerJobsListPage /> },
-      { path: 'messages', element: <CustomerMessagesPage /> },
-      { path: 'reviews', element: <CustomerReviewsPage /> },
-      { path: 'notifications', element: <CustomerNotificationsPage /> },
-      { path: 'profile', element: <CustomerProfilePage /> },
-      { path: 'settings', element: <CustomerSettingsPage /> },
+      { path: "dashboard", element: <CustomerDashboardPage /> },
+      { path: "problems/new", element: <CreateProblemPage /> },
+      { path: "problems", element: <CustomerProblemsListPage /> },
+      { path: "problems/:problemId", element: <CustomerProblemDetailPage /> },
+      {
+        path: "problems/:problemId/compare",
+        element: <ProposalComparisonPage />,
+      },
+      { path: "jobs", element: <CustomerJobsListPage /> },
+      { path: "messages", element: <CustomerMessagesPage /> },
+      { path: "reviews", element: <CustomerReviewsPage /> },
+      { path: "notifications", element: <CustomerNotificationsPage /> },
+      { path: "profile", element: <CustomerProfilePage /> },
+      { path: "settings", element: <CustomerSettingsPage /> },
     ],
   },
 
@@ -225,7 +230,7 @@ export const router = createBrowserRouter([
 
   // 404 Catch-All
   {
-    path: '*',
+    path: "*",
     element: <NotFoundPage />,
   },
 ]);
