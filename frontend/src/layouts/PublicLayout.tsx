@@ -2,10 +2,21 @@ import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Menu, X, ArrowRight, ShieldCheck, Wrench } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export function PublicLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
+  const isAuthenticated = Boolean(user);
+  const role = user?.user_metadata?.role;
+
+  const dashboardPath =
+    role === 'CUSTOMER'
+      ? '/customer/dashboard'
+      : role === 'PROFESSIONAL'
+      ? '/pro/dashboard'
+      : '/admin/dashboard';
 
   const navLinks = [{ label: "About", path: "/about" }];
 
@@ -76,16 +87,26 @@ export function PublicLayout() {
 
           {/* Mobile Navigation Controls */}
           <div className="flex sm:hidden items-center gap-2">
-            <Link to="/auth/register">
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/auth/login">
-              <Button variant="primary" size="sm">
-                Get Started
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to={dashboardPath}>
+                <Button variant="primary" size="sm">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/auth/login">
+                  <Button variant="outline" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/auth/register">
+                  <Button variant="primary" size="sm">
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={

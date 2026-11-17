@@ -34,3 +34,25 @@ export interface Problem {
   proposalsCount: number;
   createdAt: string;
 }
+
+export interface CreateProblemPayload {
+  title: string;
+  description: string;
+  category?: string;
+  mediaUrls: string[];
+  city: string;
+  neighborhood: string;
+  landmark?: string;
+  urgency: UrgencyLevel;
+  preferredDate: string;
+  preferredTimeWindow: string;
+  budgetMin?: number;
+  budgetMax?: number;
+}
+
+export interface ProblemMetrics {
+  activeProblems: number;
+  incomingProposals: number;
+  jobsInProgress: number;
+  resolvedCount: number;
+}

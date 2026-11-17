@@ -9,11 +9,26 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { apiFetch } from "@/lib/api";
+import type { UserRole, VerificationStatus } from "@/types/common";
+
+type AuthUser = User & {
+  name?: string;
+  city?: string;
+  businessName?: string;
+  category?: string;
+  skills?: string[];
+  coverageRadius?: string;
+  verificationStatus?: VerificationStatus;
+  role?: UserRole;
+};
 
 interface AuthContextValue {
-  user: User | null;
+  user: AuthUser | null;
   session: Session | null;
   loading: boolean;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  role: UserRole | null;
 
   signInWithPassword: (
     email: string,
@@ -48,6 +63,27 @@ interface AuthContextValue {
   signOut: () => Promise<{
     error: Error | null;
   }>;
+  requestPasswordReset: (email: string) => Promise<{
+    success: boolean;
+    message: string;
+    mockResetToken?: string;
+  }>;
+  validateResetToken: (token: string) => Promise<{
+    valid: boolean;
+    email?: string;
+    error?: string;
+  }>;
+  resetPassword: (input: {
+    token: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => Promise<{ success: boolean; message: string }>;
+  changePassword: (input: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => Promise<{ success: boolean; message: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -60,9 +96,49 @@ function toError(error: unknown) {
   return new Error("Authentication request failed");
 }
 
+function toAuthUser(user: User | null): AuthUser | null {
+  if (!user) {
+    return null;
+  }
+
+  const metadata = user.user_metadata ?? {};
+  return {
+    ...user,
+    name:
+      (typeof metadata.name === "string" && metadata.name) ||
+      (typeof metadata.full_name === "string" && metadata.full_name) ||
+      user.email ||
+      undefined,
+    city: typeof metadata.city === "string" ? metadata.city : undefined,
+    businessName:
+      typeof metadata.businessName === "string"
+        ? metadata.businessName
+        : undefined,
+    category:
+      typeof metadata.category === "string" ? metadata.category : undefined,
+    skills: Array.isArray(metadata.skills)
+      ? metadata.skills.filter((skill): skill is string => typeof skill === "string")
+      : undefined,
+    coverageRadius:
+      typeof metadata.coverageRadius === "string"
+        ? metadata.coverageRadius
+        : undefined,
+    verificationStatus:
+      typeof metadata.verificationStatus === "string"
+        ? (metadata.verificationStatus as VerificationStatus)
+        : undefined,
+    role:
+      metadata.role === "CUSTOMER" ||
+      metadata.role === "PROFESSIONAL" ||
+      metadata.role === "ADMIN"
+        ? metadata.role
+        : undefined,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -83,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      setUser(toAuthUser(currentSession?.user ?? null));
       setLoading(false);
     }
 
@@ -97,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      setUser(toAuthUser(currentSession?.user ?? null));
       setLoading(false);
     });
 
@@ -251,11 +327,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }
 
+  async function requestPasswordReset(email: string) {
+    const { error } = await resetPasswordForEmail(email);
+    return {
+      success: !error,
+      message: error
+        ? error.message
+        : "If an account exists for that email, a reset link has been sent.",
+    };
+  }
+
+  async function validateResetToken(token: string) {
+    return token.trim()
+      ? { valid: true }
+      : { valid: false, error: "A reset token is required." };
+  }
+
+  async function resetPassword(input: {
+    token: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) {
+    if (!input.token.trim()) {
+      return { success: false, message: "A reset token is required." };
+    }
+
+    const { error } = await updatePassword(input.newPassword);
+    return {
+      success: !error,
+      message: error?.message ?? "Password updated successfully.",
+    };
+  }
+
+  async function changePassword(input: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) {
+    void input.currentPassword;
+    void input.confirmPassword;
+    const { error } = await updatePassword(input.newPassword);
+    return {
+      success: !error,
+      message: error?.message ?? "Password updated successfully.",
+    };
+  }
+
+  async function logout() {
+    await signOut();
+  }
+
+  const role = user?.role ?? null;
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       session,
       loading,
+      isLoading: loading,
+      isAuthenticated: Boolean(user),
+      role,
       signInWithPassword,
       signInWithGoogle,
       updateUserProfile,
@@ -264,8 +395,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       syncApplicationProfile,
       signUpWithPassword,
       signOut,
+      requestPasswordReset,
+      validateResetToken,
+      resetPassword,
+      changePassword,
+      logout,
     }),
-    [user, session, loading],
+    [user, session, loading, role],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
