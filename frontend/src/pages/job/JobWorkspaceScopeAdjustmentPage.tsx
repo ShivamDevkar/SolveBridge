@@ -85,7 +85,7 @@ export function JobWorkspaceScopeAdjustmentPage() {
   // Access Control
   const isParticipant =
     role === 'ADMIN' ||
-    (user && (user.id === job.customerId || user.id === job.professionalId));
+    (user && (user.id === job.customerId || user.id === (job.professionalUserId ?? job.professionalId)));
 
   if (!isParticipant) {
     return (
@@ -367,7 +367,7 @@ export function JobWorkspaceScopeAdjustmentPage() {
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 uppercase font-semibold block">Proposed New Total</span>
-                        <span className="font-mono font-bold text-slate-900 text-base text-blue-700">
+                        <span className="font-mono font-bold text-base text-blue-700">
                           ₹{adj.resultingJobAmount.toLocaleString()}
                         </span>
                       </div>

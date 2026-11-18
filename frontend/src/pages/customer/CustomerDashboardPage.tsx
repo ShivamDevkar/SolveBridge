@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/context/AuthContext';
-import { mockProblemAdapter } from '@/services/mockProblemAdapter';
+import { apiProblemAdapter } from '@/services/http/problemAdapter';
 import type { Problem, ProblemMetrics } from '@/types/problem';
 import {
   PlusCircle,
@@ -36,8 +36,8 @@ export function CustomerDashboardPage() {
     async function loadDashboardData() {
       try {
         const [loadedProblems, loadedMetrics] = await Promise.all([
-          mockProblemAdapter.getProblems(user?.id),
-          mockProblemAdapter.getProblemMetrics(user?.id),
+          apiProblemAdapter.getProblems(user?.id),
+          apiProblemAdapter.getProblemMetrics(user?.id),
         ]);
 
         if (isMounted) {

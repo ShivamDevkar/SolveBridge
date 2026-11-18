@@ -19,8 +19,8 @@ import {
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/context/AuthContext";
 import type { Job, JobLifecycleStatus } from "@/types/job";
-import { mockJobAdapter } from "@/services/mockJobAdapter";
-import { mockMessageAdapter } from "@/services/mockMessageAdapter";
+import { apiJobAdapter } from "@/services/http/jobAdapter";
+import { apiMessageAdapter } from "@/services/http/messageAdapter";
 
 export interface JobWorkspaceContextType {
   job: Job | null;
@@ -50,7 +50,7 @@ export function JobWorkspaceLayout() {
   const loadUnread = useCallback(async () => {
     if (!jobId || !user) return;
     try {
-      const count = await mockMessageAdapter.getUnreadCount(jobId, user.id);
+      const count = await apiMessageAdapter.getUnreadCount(jobId, user.id);
       setUnreadCount(count);
     } catch {
       // ignore
@@ -63,7 +63,7 @@ export function JobWorkspaceLayout() {
       return;
     }
     try {
-      const found = await mockJobAdapter.getJobById(jobId);
+      const found = await apiJobAdapter.getJobById(jobId);
       setJob(found);
       await loadUnread();
     } catch (err) {
@@ -88,20 +88,38 @@ export function JobWorkspaceLayout() {
       ? '/admin/jobs'
       : '/customer/jobs';
 
-  const steps = [
-    { id: "SCHEDULED", label: "Scheduled", status: "completed" },
-    { id: "ON_THE_WAY", label: "On The Way", status: "completed" },
-    { id: "ARRIVED", label: "Arrived", status: "completed" },
-    { id: "INSPECTION", label: "Inspection", status: "completed" },
-    { id: "IN_PROGRESS", label: "In Progress", status: "current" },
-    { id: "COMPLETED", label: "Completed", status: "upcoming" },
-    {
-      id: "CUSTOMER_CONFIRMED",
-      label: "Customer Confirmed",
-      status: "upcoming",
-    },
-    { id: "CLOSED", label: "Closed", status: "upcoming" },
+  const statusFlow = [
+    "SCHEDULED",
+    "ON_THE_WAY",
+    "ARRIVED",
+    "INSPECTION",
+    "IN_PROGRESS",
+    "COMPLETED",
+    "CUSTOMER_CONFIRMED",
+    "CLOSED",
   ];
+  const currentStatusIndex = statusFlow.indexOf(job?.status ?? "");
+  const steps = [
+    { id: "SCHEDULED", label: "Scheduled" },
+    { id: "ON_THE_WAY", label: "On The Way" },
+    { id: "ARRIVED", label: "Arrived" },
+    { id: "INSPECTION", label: "Inspection" },
+    { id: "IN_PROGRESS", label: "In Progress" },
+    { id: "COMPLETED", label: "Completed" },
+    { id: "CUSTOMER_CONFIRMED", label: "Customer Confirmed" },
+    { id: "CLOSED", label: "Closed" },
+  ].map((step) => {
+    const stepIndex = statusFlow.indexOf(step.id);
+    return {
+      ...step,
+      status:
+        stepIndex < currentStatusIndex
+          ? "completed"
+          : stepIndex === currentStatusIndex
+            ? "current"
+            : "upcoming",
+    };
+  });
 
   const jobTabs = [
     {
@@ -221,7 +239,7 @@ export function JobWorkspaceLayout() {
                 </span>
                 <span className="text-xs text-slate-500 hidden md:inline">
                   Category:{" "}
-                  <strong className="text-slate-800">HVAC Service</strong>
+                  <strong className="text-slate-800">{job.category}</strong>
                 </span>
               </div>
               <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight mt-0.5">
@@ -235,7 +253,7 @@ export function JobWorkspaceLayout() {
             <div className="text-right">
               <p className="text-slate-500">Agreed Solution Price</p>
               <p className="text-base font-bold text-emerald-700 font-mono">
-                ₹900
+                ₹{job.currentAmount.toLocaleString()}
               </p>
             </div>
             <div className="h-8 w-px bg-slate-200 hidden sm:block" />

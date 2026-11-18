@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { mockProblemAdapter } from '@/services/mockProblemAdapter';
+import { apiProblemAdapter } from '@/services/http/problemAdapter';
 import type { Problem, ProblemStatus } from '@/types/problem';
 import {
   ArrowLeft,
@@ -35,7 +35,7 @@ export function CustomerProblemDetailPage() {
       if (!problemId) return;
 
       try {
-        const found = await mockProblemAdapter.getProblemById(problemId);
+        const found = await apiProblemAdapter.getProblemById(problemId);
         if (isMounted) {
           setProblem(found);
           setIsLoading(false);

@@ -160,6 +160,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setSession(currentSession);
       setUser(toAuthUser(currentSession?.user ?? null));
+
+      if (currentSession?.user) {
+        const metadata = currentSession.user.user_metadata ?? {};
+        const role = metadata.role;
+
+        if (
+          (role === "CUSTOMER" || role === "PROFESSIONAL") &&
+          typeof metadata.firstName === "string" &&
+          typeof metadata.lastName === "string"
+        ) {
+          const { error: syncError } = await syncApplicationProfile({
+            ...metadata,
+            role,
+            firstName: metadata.firstName,
+            lastName: metadata.lastName,
+          });
+
+          if (syncError) {
+            console.error(
+              "Unable to synchronize application profile:",
+              syncError,
+            );
+          }
+        }
+      }
+
       setLoading(false);
     }
 
@@ -309,7 +335,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function syncApplicationProfile(profile: Record<string, unknown>) {
     try {
-      await apiFetch("/auth/sync", {
+      await apiFetch("/api/v1/auth/sync", {
         method: "POST",
         body: JSON.stringify(profile),
       });

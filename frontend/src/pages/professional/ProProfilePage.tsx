@@ -46,10 +46,10 @@ export function ProProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     businessName: user?.businessName || user?.name || '',
-    phone: user?.phone || '+91 98765 43210',
-    category: user?.category || 'Electrical Systems',
-    skills: user?.skills && user.skills.length > 0 ? user.skills : ['Wiring Diagnostics', 'MCB Breakers'],
-    coverageRadius: user?.coverageRadius || '15',
+    phone: user?.phone || '',
+    category: user?.category || '',
+    skills: user?.skills || [],
+    coverageRadius: user?.coverageRadius || '',
   });
 
   const [newSkillInput, setNewSkillInput] = useState('');
@@ -71,10 +71,10 @@ export function ProProfilePage() {
     if (user) {
       setFormData({
         businessName: user.businessName || user.name || '',
-        phone: user.phone || '+91 98765 43210',
-        category: user.category || 'Electrical Systems',
-        skills: user.skills && user.skills.length > 0 ? user.skills : ['Wiring Diagnostics', 'MCB Breakers'],
-        coverageRadius: user.coverageRadius || '15',
+        phone: user.phone || '',
+        category: user.category || '',
+        skills: user.skills || [],
+        coverageRadius: user.coverageRadius || '',
       });
     }
   }, [user]);
@@ -83,10 +83,10 @@ export function ProProfilePage() {
     if (user) {
       setFormData({
         businessName: user.businessName || user.name || '',
-        phone: user.phone || '+91 98765 43210',
-        category: user.category || 'Electrical Systems',
-        skills: user.skills && user.skills.length > 0 ? [...user.skills] : ['Wiring Diagnostics', 'MCB Breakers'],
-        coverageRadius: user.coverageRadius || '15',
+        phone: user.phone || '',
+        category: user.category || '',
+        skills: user.skills ? [...user.skills] : [],
+        coverageRadius: user.coverageRadius || '',
       });
     }
     setFieldErrors({});
@@ -100,10 +100,10 @@ export function ProProfilePage() {
     if (user) {
       setFormData({
         businessName: user.businessName || user.name || '',
-        phone: user.phone || '+91 98765 43210',
-        category: user.category || 'Electrical Systems',
-        skills: user.skills && user.skills.length > 0 ? [...user.skills] : ['Wiring Diagnostics', 'MCB Breakers'],
-        coverageRadius: user.coverageRadius || '15',
+        phone: user.phone || '',
+        category: user.category || '',
+        skills: user.skills ? [...user.skills] : [],
+        coverageRadius: user.coverageRadius || '',
       });
     }
     setFieldErrors({});
@@ -170,7 +170,7 @@ export function ProProfilePage() {
     setIsSaving(true);
 
     try {
-      await updateUserProfile({
+      const result = await updateUserProfile({
         businessName: formData.businessName.trim(),
         name: formData.businessName.trim(),
         phone: formData.phone.trim(),
@@ -178,6 +178,10 @@ export function ProProfilePage() {
         skills: formData.skills,
         coverageRadius: formData.coverageRadius.trim(),
       });
+
+      if (result.error) {
+        throw result.error;
+      }
 
       setSuccessMessage('Professional profile and service settings updated successfully.');
       setIsEditing(false);
@@ -360,7 +364,7 @@ export function ProProfilePage() {
               </div>
               <CardDescription className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
-                <span>{user?.email || 'pro@solvebid.demo'}</span>
+                <span>{user?.email || 'Email unavailable'}</span>
               </CardDescription>
             </div>
           </div>
@@ -507,7 +511,7 @@ export function ProProfilePage() {
                     <span className="text-slate-400 block text-[10px] uppercase font-semibold">
                       Account Email
                     </span>
-                    <span className="font-mono text-slate-800">{user?.email || 'pro@solvebid.demo'}</span>
+                    <span className="font-mono text-slate-800">{user?.email || 'Email unavailable'}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-semibold">
@@ -561,7 +565,7 @@ export function ProProfilePage() {
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
                   Contact Phone
                 </span>
-                <p className="text-sm font-semibold text-slate-900">{user?.phone || '+91 98765 43210'}</p>
+                <p className="text-sm font-semibold text-slate-900">{user?.phone || 'Not provided'}</p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
@@ -570,7 +574,7 @@ export function ProProfilePage() {
                 </span>
                 <p className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{user?.category || 'Electrical Systems'}</span>
+                  <span>{user?.category || 'Not provided'}</span>
                 </p>
               </div>
 
@@ -580,7 +584,7 @@ export function ProProfilePage() {
                 </span>
                 <p className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
                   <Navigation className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Within {user?.coverageRadius || '15'} km</span>
+                  <span>{user?.coverageRadius ? `Within ${user.coverageRadius} km` : 'Not provided'}</span>
                 </p>
               </div>
 
@@ -617,18 +621,19 @@ export function ProProfilePage() {
                 Registered Trade Skills
               </span>
               <div className="flex flex-wrap gap-2">
-                {(user?.skills && user.skills.length > 0
-                  ? user.skills
-                  : ['Wiring Diagnostics', 'MCB Breakers', 'Load Balancing']
-                ).map((skill) => (
-                  <span
-                    key={skill}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs"
-                  >
-                    <Wrench className="w-3 h-3 text-emerald-600" />
-                    {skill}
-                  </span>
-                ))}
+                {user?.skills && user.skills.length > 0 ? (
+                  user.skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs"
+                    >
+                      <Wrench className="w-3 h-3 text-emerald-600" />
+                      {skill}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-500">No skills provided</span>
+                )}
               </div>
             </div>
           </CardContent>

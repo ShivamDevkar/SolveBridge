@@ -45,6 +45,7 @@ export interface Job {
   customerId: string;
   customerName: string;
   professionalId: string;
+  professionalUserId?: string;
   professionalName: string;
   category: string;
   title: string;

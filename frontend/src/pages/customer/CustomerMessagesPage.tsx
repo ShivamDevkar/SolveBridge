@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
-import { mockJobAdapter } from '@/services/mockJobAdapter';
-import { mockMessageAdapter } from '@/services/mockMessageAdapter';
+import { apiJobAdapter } from '@/services/http/jobAdapter';
+import { apiMessageAdapter } from '@/services/http/messageAdapter';
 import type { Job } from '@/types/job';
 import type { ChatMessage } from '@/types/message';
 import {
@@ -30,16 +30,18 @@ export function CustomerMessagesPage() {
   const loadThreads = async () => {
     setIsLoading(true);
     try {
-      const jobs = await mockJobAdapter.getJobs({
+      const jobs = await apiJobAdapter.getJobs({
         role: 'CUSTOMER',
-        userId: user?.id || 'user-demo-customer',
+        userId: user?.id,
       });
 
       const threadData: JobThread[] = await Promise.all(
         jobs.map(async (job) => {
           try {
-            const msgs = await mockMessageAdapter.getMessages(job.id);
-            const unread = await mockMessageAdapter.getUnreadCount(job.id, user?.id || 'user-demo-customer');
+            const msgs = await apiMessageAdapter.getMessages(job.id);
+            const unread = user?.id
+              ? await apiMessageAdapter.getUnreadCount(job.id, user.id)
+              : 0;
             const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : undefined;
             return {
               job,

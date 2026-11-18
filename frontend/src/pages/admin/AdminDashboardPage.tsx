@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { mockAdminAdapter } from '@/services/mockAdminAdapter';
-import { mockDisputeAdapter } from '@/services/mockDisputeAdapter';
-import type { PlatformMetrics, ProfessionalVerificationRecord } from '@/types/admin';
-import type { Dispute } from '@/types/dispute';
+import { apiFetch } from '@/lib/api';
 import {
   ShieldCheck,
   Briefcase,
@@ -18,9 +15,20 @@ import {
 } from 'lucide-react';
 
 export function AdminDashboardPage() {
-  const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
-  const [pendingVerifications, setPendingVerifications] = useState<ProfessionalVerificationRecord[]>([]);
-  const [recentDisputes, setRecentDisputes] = useState<Dispute[]>([]);
+  const [stats, setStats] = useState<{
+    users: { customers: number; professionals: number };
+    problems: { open: number };
+    jobs: { active: number; completed: number };
+    revenue: { grossRupees: number };
+    pendingVerifications: number;
+    openDisputes: number;
+  } | null>(null);
+  const [pendingVerifications, setPendingVerifications] = useState<Array<{
+    professionalId: string;
+    professionalName: string;
+    businessName: string | null;
+    skills: string[];
+  }>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -28,16 +36,16 @@ export function AdminDashboardPage() {
 
     async function loadDashboardData() {
       try {
-        const [met, verifs, disps] = await Promise.all([
-          mockAdminAdapter.getPlatformMetrics(),
-          mockAdminAdapter.getVerificationQueue({ status: 'PENDING_VERIFICATION' }),
-          mockDisputeAdapter.getDisputes(),
+        const [statsResponse, verificationResponse] = await Promise.all([
+          apiFetch<{ data: { stats: typeof stats } }>('/api/v1/admin/stats'),
+          apiFetch<{ data: { verifications: typeof pendingVerifications } }>(
+            '/api/v1/admin/verifications?status=PENDING&pageSize=3',
+          ),
         ]);
 
         if (isMounted) {
-          setMetrics(met);
-          setPendingVerifications(verifs.slice(0, 3));
-          setRecentDisputes(disps.slice(0, 3));
+          setStats(statsResponse.data.stats);
+          setPendingVerifications(verificationResponse.data.verifications);
           setIsLoading(false);
         }
       } catch (err) {
@@ -53,7 +61,7 @@ export function AdminDashboardPage() {
     };
   }, []);
 
-  if (isLoading || !metrics) {
+  if (isLoading || !stats) {
     return (
       <div className="p-12 text-center text-slate-500 space-y-3">
         <Clock className="w-8 h-8 text-purple-600 animate-spin mx-auto" />
@@ -84,7 +92,7 @@ export function AdminDashboardPage() {
               size="sm"
               className="bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-2xs"
             >
-              Audit Pending Pros ({metrics.pendingVerifications})
+              Audit Pending Pros ({stats.pendingVerifications})
             </Button>
           </Link>
           <Link to="/admin/audit-logs">
@@ -105,7 +113,7 @@ export function AdminDashboardPage() {
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 font-medium">Total Customers</p>
             <p className="text-2xl font-bold text-blue-700 font-mono mt-1">
-              {metrics.totalCustomers.toLocaleString()}
+              {stats.users.customers.toLocaleString()}
             </p>
             <span className="text-[10px] text-slate-400">Registered platform clients</span>
           </CardContent>
@@ -115,7 +123,7 @@ export function AdminDashboardPage() {
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 font-medium">Verified Professionals</p>
             <p className="text-2xl font-bold text-emerald-700 font-mono mt-1">
-              {metrics.verifiedProfessionals.toLocaleString()}
+              {stats.users.professionals.toLocaleString()}
             </p>
             <span className="text-[10px] text-slate-400">Active verified contractors</span>
           </CardContent>
@@ -125,7 +133,7 @@ export function AdminDashboardPage() {
           <CardContent className="p-4">
             <p className="text-xs text-amber-800 font-medium">Pending Verifications</p>
             <p className="text-2xl font-bold text-amber-700 font-mono mt-1">
-              {metrics.pendingVerifications}
+              {stats.pendingVerifications}
             </p>
             <span className="text-[10px] text-amber-800/80 font-medium">Awaiting credential review</span>
           </CardContent>
@@ -135,19 +143,19 @@ export function AdminDashboardPage() {
           <CardContent className="p-4">
             <p className="text-xs text-red-800 font-medium">Open Disputes</p>
             <p className="text-2xl font-bold text-red-700 font-mono mt-1">
-              {metrics.openDisputes}
+              {stats.openDisputes}
             </p>
             <span className="text-[10px] text-red-800/80 font-medium">Requires arbitration decision</span>
           </CardContent>
         </Card>
       </div>
 
-      {/* Secondary Metrics: Problems, Jobs, Simulated Volume */}
+      {/* Secondary Metrics: Problems, Jobs, Revenue */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="bg-white border-slate-200 shadow-2xs">
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 font-medium">Active Problems</p>
-            <p className="text-xl font-bold text-slate-800 font-mono mt-1">{metrics.activeProblems}</p>
+            <p className="text-xl font-bold text-slate-800 font-mono mt-1">{stats.problems.open}</p>
             <span className="text-[10px] text-slate-400">Comparing quotes / open</span>
           </CardContent>
         </Card>
@@ -155,7 +163,7 @@ export function AdminDashboardPage() {
         <Card className="bg-white border-slate-200 shadow-2xs">
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 font-medium">Active Jobs</p>
-            <p className="text-xl font-bold text-indigo-700 font-mono mt-1">{metrics.activeJobs}</p>
+            <p className="text-xl font-bold text-indigo-700 font-mono mt-1">{stats.jobs.active}</p>
             <span className="text-[10px] text-slate-400">Currently in progress</span>
           </CardContent>
         </Card>
@@ -163,7 +171,7 @@ export function AdminDashboardPage() {
         <Card className="bg-white border-slate-200 shadow-2xs">
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 font-medium">Completed Jobs</p>
-            <p className="text-xl font-bold text-emerald-700 font-mono mt-1">{metrics.completedJobs}</p>
+            <p className="text-xl font-bold text-emerald-700 font-mono mt-1">{stats.jobs.completed}</p>
             <span className="text-[10px] text-slate-400">Confirmed by customers</span>
           </CardContent>
         </Card>
@@ -171,15 +179,12 @@ export function AdminDashboardPage() {
         <Card className="bg-slate-50 border-slate-200 shadow-2xs">
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 font-medium flex items-center justify-between">
-              <span>Gross Volume</span>
-              <span className="text-[9px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
-                Simulated
-              </span>
+              <span>Gross Revenue</span>
             </p>
             <p className="text-xl font-bold text-slate-800 font-mono mt-1">
-              ₹{metrics.simulatedRevenue.toLocaleString()}
+              ₹{stats.revenue.grossRupees.toLocaleString()}
             </p>
-            <span className="text-[10px] text-slate-400">Dev fixture estimate</span>
+            <span className="text-[10px] text-slate-400">Confirmed job value</span>
           </CardContent>
         </Card>
       </div>
@@ -197,7 +202,7 @@ export function AdminDashboardPage() {
               <CardDescription className="text-xs text-slate-500">Credential and background audit requests</CardDescription>
             </div>
             <Link to="/admin/verification" className="text-xs text-purple-700 hover:underline font-semibold flex items-center gap-1">
-              <span>View All ({metrics.pendingVerifications})</span>
+              <span>View All ({stats.pendingVerifications})</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </CardHeader>
@@ -210,7 +215,7 @@ export function AdminDashboardPage() {
             ) : (
               pendingVerifications.map((pro) => (
                 <div
-                  key={pro.id}
+                  key={pro.professionalId}
                   className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs"
                 >
                   <div className="space-y-0.5">
@@ -219,7 +224,9 @@ export function AdminDashboardPage() {
                       <span className="text-[10px] text-slate-400 font-mono">#{pro.professionalId}</span>
                     </div>
                     <p className="text-[11px] text-slate-500">
-                      Category: <strong className="text-slate-700">{pro.category}</strong> • {pro.documents.length} credentials
+                      {pro.skills.length > 0
+                        ? pro.skills.slice(0, 3).join(", ")
+                        : "No listed skills"}
                     </p>
                   </div>
                   <Link to={`/admin/verification/${pro.professionalId}`}>
@@ -233,7 +240,7 @@ export function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Disputes Preview */}
+        {/* Disputes Summary */}
         <Card className="bg-white border-slate-200 shadow-2xs">
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2 border-b border-slate-100">
             <div>
@@ -244,44 +251,17 @@ export function AdminDashboardPage() {
               <CardDescription className="text-xs text-slate-500">Customer-contractor escalated conflicts</CardDescription>
             </div>
             <Link to="/admin/disputes" className="text-xs text-red-700 hover:underline font-semibold flex items-center gap-1">
-              <span>View All ({metrics.openDisputes})</span>
+              <span>View All ({stats.openDisputes})</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </CardHeader>
           <CardContent className="p-4 pt-3 space-y-2.5">
-            {recentDisputes.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 space-y-1">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto" />
-                <p className="text-xs">No active dispute cases on file.</p>
-              </div>
-            ) : (
-              recentDisputes.map((disp) => (
-                <div
-                  key={disp.id}
-                  className="p-3 bg-red-50/40 border border-red-200 rounded-lg flex items-center justify-between text-xs"
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-red-700">#{disp.id}</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-white text-slate-700 border border-slate-200">
-                        {disp.status}
-                      </span>
-                      <span className="text-xs font-bold text-slate-900 truncate max-w-50">
-                        {disp.title}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-600">
-                      Job: <strong className="font-mono text-slate-800">#{disp.jobId}</strong> • Amount: ₹{disp.disputedAmount.toLocaleString()}
-                    </p>
-                  </div>
-                  <Link to={`/admin/disputes/${disp.id}`}>
-                    <Button variant="outline" size="sm" className="text-xs border-red-200 text-red-700 hover:bg-red-50">
-                      Arbitrate
-                    </Button>
-                  </Link>
-                </div>
-              ))
-            )}
+            <div className="p-6 text-center text-slate-500 space-y-1">
+              <ShieldAlert className="w-6 h-6 text-red-600 mx-auto" />
+              <p className="text-xs">
+                {stats.openDisputes} open dispute{stats.openDisputes === 1 ? "" : "s"} currently need review.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

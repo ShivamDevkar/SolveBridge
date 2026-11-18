@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -8,9 +8,9 @@ import {
   MessageSquare,
   Calendar,
   IndianRupee,
+  ShieldCheck,
   Star,
   UserCheck,
-  ShieldCheck,
   Settings,
   Wrench,
   Menu,
@@ -23,13 +23,19 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
 import { useAuth } from "@/context/AuthContext";
+import { apiProblemAdapter } from "@/services/http/problemAdapter";
+import { apiFetch } from "@/lib/api";
 
 export function ProfessionalLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
+  const [matchingCount, setMatchingCount] = useState(0);
+  const [reviewAverage, setReviewAverage] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
   const location = useLocation();
   const { signOut, user } = useAuth();
   const displayName =
+    user?.businessName ||
     (typeof user?.user_metadata?.name === "string" && user.user_metadata.name) ||
     (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
     user?.email ||
@@ -41,6 +47,33 @@ export function ProfessionalLayout() {
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
   const isVerified = user?.user_metadata?.verificationStatus === "VERIFIED";
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      apiProblemAdapter.getProblems(),
+      apiFetch<{ data: { summary: { averageRating: number; totalReviews: number } } }>(
+        "/api/v1/reviews/mine",
+      ),
+    ])
+      .then(([problems, reviews]) => {
+        if (!mounted) return;
+        setMatchingCount(
+          problems.filter(
+            (problem) =>
+              problem.status === "OPEN" || problem.status === "PROPOSALS_RECEIVED",
+          ).length,
+        );
+        setReviewAverage(reviews.data.summary.averageRating);
+        setReviewCount(reviews.data.summary.totalReviews);
+      })
+      .catch((error) => {
+        console.error("Failed to load professional layout data:", error);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const handleLogout = async () => {
     const { error } = await signOut();
     if (!error) {
@@ -58,7 +91,7 @@ export function ProfessionalLayout() {
       label: "Matching Problems",
       path: "/pro/matching-problems",
       icon: <Search className="w-4 h-4" />,
-      badge: "5 New",
+      badge: matchingCount > 0 ? `${matchingCount} New` : undefined,
     },
     {
       label: "My Proposals",
@@ -225,12 +258,12 @@ export function ProfessionalLayout() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
                 <p className="text-xs font-semibold text-slate-800 truncate">
-                  Arun HVAC
+                  {displayName}
                 </p>
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               </div>
               <p className="text-[10px] text-slate-500 truncate">
-                ★ 4.8 (142 jobs)
+                ★ {reviewAverage.toFixed(1)} ({reviewCount} reviews)
               </p>
             </div>
           </div>
@@ -282,7 +315,7 @@ export function ProfessionalLayout() {
               to="/pro/matching-problems"
               className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors hidden sm:inline-flex items-center gap-1.5"
             >
-              <span>⚡ 5 Matching Jobs Nearby</span>
+              <span>⚡ {matchingCount} Matching Jobs Nearby</span>
             </Link>
           </div>
         </header>

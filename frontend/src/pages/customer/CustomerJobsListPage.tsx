@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
-import { mockJobAdapter } from '@/services/mockJobAdapter';
+import { apiJobAdapter } from '@/services/http/jobAdapter';
 import type { Job, JobLifecycleStatus } from '@/types/job';
 import {
   Wrench,
@@ -28,9 +28,9 @@ export function CustomerJobsListPage() {
 
     async function loadJobs() {
       try {
-        const list = await mockJobAdapter.getJobs({
+        const list = await apiJobAdapter.getJobs({
           role: 'CUSTOMER',
-          userId: user?.id || 'user-demo-customer',
+          userId: user?.id,
         });
         if (isMounted) {
           setJobs(list);

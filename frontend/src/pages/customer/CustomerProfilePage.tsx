@@ -124,7 +124,7 @@ export function CustomerProfilePage() {
     }
   };
 
-  const displayName = user?.name || 'Customer User';
+  const displayName = user?.name || 'Customer';
   const initials =
     displayName
       .split(' ')
@@ -228,7 +228,7 @@ export function CustomerProfilePage() {
               </div>
               <CardDescription className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
-                <span>{user?.email || 'customer@solvebid.demo'}</span>
+                <span>{user?.email || 'Email unavailable'}</span>
               </CardDescription>
             </div>
           </div>
@@ -331,7 +331,7 @@ export function CustomerProfilePage() {
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
                   Full Name
                 </span>
-                <p className="text-sm font-semibold text-slate-900">{user?.name || 'Sarthak Chavan'}</p>
+                <p className="text-sm font-semibold text-slate-900">{user?.name || 'Customer'}</p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">

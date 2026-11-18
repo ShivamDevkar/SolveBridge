@@ -4,8 +4,8 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { mockProblemAdapter } from '@/services/mockProblemAdapter';
-import { mockProposalAdapter } from '@/services/mockProposalAdapter';
+import { apiProblemAdapter } from '@/services/http/problemAdapter';
+import { apiProposalAdapter } from '@/services/http/proposalAdapter';
 import { matchingService, type MockProfessionalProfile } from '@/services/matchingService';
 import { useAuth } from '@/context/AuthContext';
 import type { Problem } from '@/types/problem';
@@ -53,11 +53,12 @@ export function MatchingProblemsPage() {
 
     async function loadData() {
       try {
-        const proId = user?.id || 'user-demo-pro';
+        if (!user?.id) return;
+        const proId = user.id;
         const [profile, allProblems, proProposals] = await Promise.all([
           matchingService.getProfessionalById(proId),
-          mockProblemAdapter.getProblems(),
-          mockProposalAdapter.getProposalsByProfessional(proId),
+          apiProblemAdapter.getProblems(),
+          apiProposalAdapter.getProposalsByProfessional(proId),
         ]);
 
         if (!isMounted) return;
