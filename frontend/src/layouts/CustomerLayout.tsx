@@ -81,7 +81,7 @@ export function CustomerLayout() {
       id: "1",
       label: "Customer Profile",
       icon: <User className="w-4 h-4" />,
-      onClick: () => alert("Customer Profile"),
+      onClick: () => (window.location.href = "/customer/profile"),
     },
     {
       id: "2",

@@ -4,8 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { mockProblemAdapter } from '@/services/mockProblemAdapter';
-import { mockProposalAdapter } from '@/services/mockProposalAdapter';
+import { apiProblemAdapter } from '@/services/http/problemAdapter';
+import { apiProposalAdapter } from '@/services/http/proposalAdapter';
 import { matchingService, type MockProfessionalProfile } from '@/services/matchingService';
 import { useAuth } from '@/context/AuthContext';
 import type { Problem } from '@/types/problem';
@@ -64,11 +64,12 @@ export function ProProblemInspectPage() {
       if (!problemId) return;
 
       try {
-        const proId = user?.id || 'user-demo-pro';
+        if (!user?.id) return;
+        const proId = user.id;
         const [prob, profile, proProps] = await Promise.all([
-          mockProblemAdapter.getProblemById(problemId),
+          apiProblemAdapter.getProblemById(problemId),
           matchingService.getProfessionalById(proId),
-          mockProposalAdapter.getProposalsByProfessional(proId),
+          apiProposalAdapter.getProposalsByProfessional(proId),
         ]);
 
         if (!isMounted) return;
@@ -150,18 +151,22 @@ export function ProProblemInspectPage() {
     setIsSubmitting(true);
 
     try {
-      const proId = user?.id || 'user-demo-pro';
+      const proId = user?.id;
+      if (!proId) {
+        setFormError('You must be signed in to submit a proposal.');
+        return;
+      }
       const proIdentity = {
         id: proId,
         name: proProfile?.name || user?.name || 'Professional User',
         businessName: proProfile?.businessName || user?.businessName || 'Pro Services',
         verified: proProfile?.verified ?? (user?.verificationStatus === 'VERIFIED'),
-        averageRating: proProfile?.averageRating || 4.8,
-        completedJobsCount: proProfile?.completedJobsCount || 20,
-        experienceYears: proProfile?.experienceYears || 5,
+        averageRating: proProfile?.averageRating ?? 0,
+        completedJobsCount: proProfile?.completedJobsCount ?? 0,
+        experienceYears: proProfile?.experienceYears ?? 0,
       };
 
-      const newProposal = await mockProposalAdapter.submitProposal(
+      const newProposal = await apiProposalAdapter.submitProposal(
         {
           problemId: problem!.id,
           estimatedPrice: numPrice,
@@ -250,7 +255,7 @@ export function ProProblemInspectPage() {
 
       {/* Header Context Banner */}
       <Card className="bg-white border-slate-200 shadow-2xs overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
+        <div className="h-2 bg-linear-to-r from-blue-600 to-indigo-600" />
         <div className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-2">

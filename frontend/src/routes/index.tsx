@@ -6,7 +6,7 @@ import { AuthLayout } from '@/layouts/AuthLayout';
 import { CustomerLayout } from '@/layouts/CustomerLayout';
 import { ProfessionalLayout } from '@/layouts/ProfessionalLayout';
 import { JobWorkspaceLayout } from '@/layouts/JobWorkspaceLayout';
-import { AdminLayout } from '@/layouts/AdminLayout';
+import { AdminLayout } from '@/layouts/AdminLayout_next';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
 // Public Pages
@@ -44,9 +44,9 @@ import {
   ProJobsListPage,
   ProMessagesPage,
   ProReviewsPage,
+  ProProfileEditPage,
   ProSchedulePage,
   ProEarningsPage,
-  ProProfileEditPage,
   ProVerificationPage,
   ProSettingsPage,
 } from "@/pages/professional/ProPages";
@@ -73,10 +73,7 @@ import {
   AdminDisputeDetailPage,
   AdminCategoriesPage,
   AdminUsersListPage,
-  AdminReportsPage,
-  AdminAnalyticsPage,
   AdminAuditLogsPage,
-  AdminSettingsPage,
 } from "@/pages/admin/AdminPages";
 
 // 404
@@ -221,10 +218,7 @@ export const router = createBrowserRouter([
       { path: 'disputes/:disputeId', element: <AdminDisputeDetailPage /> },
       { path: 'categories', element: <AdminCategoriesPage /> },
       { path: 'users', element: <AdminUsersListPage /> },
-      { path: 'reports', element: <AdminReportsPage /> },
-      { path: 'analytics', element: <AdminAnalyticsPage /> },
       { path: 'audit-logs', element: <AdminAuditLogsPage /> },
-      { path: 'settings', element: <AdminSettingsPage /> },
     ],
   },
 

@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { Dropzone, UploadedFile } from '@/components/ui/Dropzone';
 import { useAuth } from '@/context/AuthContext';
-import { mockProblemAdapter } from '@/services/mockProblemAdapter';
+import { apiProblemAdapter } from '@/services/http/problemAdapter';
 import {
   validateProblemStep1,
   validateProblemStep3,
@@ -170,15 +170,19 @@ export function CreateProblemWizardPage() {
     setSubmitError(null);
 
     try {
-      // Convert uploaded file previews or generate mock media URLs
+      // Convert uploaded file previews to accessible image URLs.
       const mediaUrls = formData.uploadedFiles
         .map((f) => f.previewUrl)
         .filter((url): url is string => Boolean(url));
 
-      const customerId = user?.id || 'user-demo-customer';
-      const customerName = user?.name || 'Customer User';
+      if (!user?.id) {
+        setSubmitError('Please sign in again before posting the problem.');
+        return;
+      }
+      const customerId = user.id;
+      const customerName = user.name || 'Customer';
 
-      const created = await mockProblemAdapter.createProblem(
+      const created = await apiProblemAdapter.createProblem(
         {
           title: formData.title,
           description: formData.description,

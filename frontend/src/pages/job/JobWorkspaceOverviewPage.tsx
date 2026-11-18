@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/context/AuthContext';
-import { mockJobAdapter } from '@/services/mockJobAdapter';
+import { apiJobAdapter } from '@/services/http/jobAdapter';
 import type { JobWorkspaceContextType } from '@/layouts/JobWorkspaceLayout';
 import type { JobLifecycleStatus, JobActivityEvent } from '@/types/job';
 import {
@@ -65,7 +65,7 @@ export function JobWorkspaceOverviewPage() {
   const loadActivities = useCallback(async () => {
     if (!job?.id) return;
     try {
-      const list = await mockJobAdapter.getJobActivities(job.id);
+      const list = await apiJobAdapter.getJobActivities(job.id);
       setActivities(list);
     } catch (err) {
       console.error('Failed to load job activities:', err);
@@ -103,7 +103,7 @@ export function JobWorkspaceOverviewPage() {
     setIsSubmittingProgress(true);
     setProgressError(null);
     try {
-      await mockJobAdapter.addProgressUpdate(job.id, progressNote.trim(), actor);
+      await apiJobAdapter.addProgressUpdate(job.id, progressNote.trim(), actor);
       setProgressNote('');
       setSuccessBanner('Progress update posted to the job activity feed.');
       await loadActivities();
@@ -121,7 +121,7 @@ export function JobWorkspaceOverviewPage() {
 
     setIsUpdatingStatus(true);
     try {
-      await mockJobAdapter.updateJobStatus(
+      await apiJobAdapter.updateJobStatus(
         job.id,
         confirmStatusModal.targetStatus,
         actor,
@@ -146,7 +146,7 @@ export function JobWorkspaceOverviewPage() {
 
     setIsUpdatingSchedule(true);
     try {
-      await mockJobAdapter.updateJobSchedule(job.id, newScheduleTime.trim(), actor, scheduleNote.trim());
+      await apiJobAdapter.updateJobSchedule(job.id, newScheduleTime.trim(), actor, scheduleNote.trim());
       setSuccessBanner('Appointment schedule updated successfully.');
       setIsScheduleModalOpen(false);
       setNewScheduleTime('');
@@ -170,7 +170,7 @@ export function JobWorkspaceOverviewPage() {
 
     setIsSubmittingCompletion(true);
     try {
-      await mockJobAdapter.requestJobCompletion(
+      await apiJobAdapter.requestJobCompletion(
         job.id,
         {
           workDone: completionWorkSummary.trim(),
@@ -195,7 +195,7 @@ export function JobWorkspaceOverviewPage() {
   const handleCustomerConfirm = async () => {
     setIsSubmittingCustomerConfirm(true);
     try {
-      await mockJobAdapter.confirmJobCompletion(job.id, actor, customerFeedbackNote.trim());
+      await apiJobAdapter.confirmJobCompletion(job.id, actor, customerFeedbackNote.trim());
       setSuccessBanner('Job completion confirmed! You have verified satisfactory service completion.');
       setIsCustomerConfirmModalOpen(false);
       setCustomerFeedbackNote('');
@@ -208,11 +208,22 @@ export function JobWorkspaceOverviewPage() {
     }
   };
 
+  const handleCloseJob = async () => {
+    try {
+      await apiJobAdapter.closeJob(job.id, actor);
+      setSuccessBanner('Job closed successfully.');
+      await refreshJob();
+      await loadActivities();
+    } catch (err: any) {
+      alert(err.message || 'Failed to close job.');
+    }
+  };
+
   // Status-specific action helpers
   const renderNextActionCard = () => {
     if (job.status === 'COMPLETED' && (isCustomer || isAdmin)) {
       return (
-        <Card className="bg-gradient-to-r from-orange-50 to-amber-50/50 border-orange-200 shadow-sm">
+        <Card className="bg-linear-to-r from-orange-50 to-amber-50/50 border-orange-200 shadow-sm">
           <CardContent className="p-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
@@ -263,11 +274,23 @@ export function JobWorkspaceOverviewPage() {
                 . Service obligations are fully satisfied.
               </p>
             </div>
-            <Link to={`/jobs/${job.id}/review`}>
-              <Button variant="outline" size="sm" className="bg-white border-emerald-300 text-emerald-800 shrink-0">
-                Leave Verified Review
+            <div className="flex items-center gap-2 shrink-0">
+              {isCustomer && (
+                <Link to={`/jobs/${job.id}/review`}>
+                  <Button variant="outline" size="sm" className="bg-white border-emerald-300 text-emerald-800">
+                    Leave Verified Review
+                  </Button>
+                </Link>
+              )}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleCloseJob}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white"
+              >
+                Close Job
               </Button>
-            </Link>
+            </div>
           </CardContent>
         </Card>
       );
@@ -337,7 +360,39 @@ export function JobWorkspaceOverviewPage() {
         );
       }
 
-      if (job.status === 'ARRIVED' || job.status === 'INSPECTION') {
+      if (job.status === 'ARRIVED') {
+        return (
+          <Card className="bg-purple-50/70 border-purple-200 shadow-sm">
+            <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Wrench className="w-4 h-4 text-purple-600" />
+                  On-Site Inspection
+                </span>
+                <p className="text-xs text-purple-950 font-medium">
+                  Inspect the issue and record any findings before physical repair work begins.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() =>
+                  setConfirmStatusModal({
+                    targetStatus: 'INSPECTION',
+                    title: 'Begin Inspection',
+                    description: 'Begin the on-site diagnostic inspection before starting repair work.',
+                  })
+                }
+              >
+                Begin Inspection
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (job.status === 'INSPECTION') {
         return (
           <Card className="bg-purple-50/70 border-purple-200 shadow-sm">
             <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -715,7 +770,7 @@ export function JobWorkspaceOverviewPage() {
               ) : activities.length === 0 ? (
                 <div className="text-center py-6 text-slate-400 text-xs">No activity logged yet.</div>
               ) : (
-                <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-120 overflow-y-auto pr-1">
                   {activities.map((act) => {
                     const isSystem = act.actorRole === 'SYSTEM';
                     const isPro = act.actorRole === 'PROFESSIONAL';

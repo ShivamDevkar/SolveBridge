@@ -3,6 +3,8 @@ import { z } from "zod";
 import requireAuth from "../middleware/auth";
 import { requireRole } from "../middleware/role";
 import { prisma } from "../config/prisma";
+import { asyncHandler } from "../utils/asyncHandler";
+import { parseWith } from "../utils/validate";
 
 const router = Router();
 
@@ -24,12 +26,12 @@ const profileSchema = z.object({
   coverageRadius: z.coerce.number().int().min(1).max(100).optional(),
 });
 
-async function syncProfile(req: Request, res: Response) {
+const syncProfile = asyncHandler(async (req, res) => {
   const authenticatedUser = res.locals.user as {
     id: string;
     email?: string;
   };
-  const profile = profileSchema.parse(req.body);
+  const profile = parseWith(profileSchema, req.body);
 
   const user = await prisma.user.upsert({
     where: { id: authenticatedUser.id },
@@ -50,6 +52,7 @@ async function syncProfile(req: Request, res: Response) {
           : undefined,
     },
     update: {
+      role: profile.role,
       firstName: profile.firstName,
       lastName: profile.lastName,
       phone: profile.phone,
@@ -80,7 +83,7 @@ async function syncProfile(req: Request, res: Response) {
       email: authenticatedUser.email ?? null,
     },
   });
-}
+});
 
 router.get(
   "/me",
@@ -88,8 +91,6 @@ router.get(
   requireRole("CUSTOMER", "PROFESSIONAL", "ADMIN"),
   getCurrentUser,
 );
-router.post("/sync", requireAuth, (req, res, next) => {
-  void syncProfile(req, res).catch(next);
-});
+router.post("/sync", requireAuth, syncProfile);
 
 export default router;

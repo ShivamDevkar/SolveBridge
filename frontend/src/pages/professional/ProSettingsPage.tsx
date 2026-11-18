@@ -101,7 +101,7 @@ export function ProSettingsPage() {
     setIsLoggingOut(true);
     try {
       await logout();
-      navigate('/login', { replace: true });
+      navigate('/auth/login', { replace: true });
     } catch {
       setIsLoggingOut(false);
     }
@@ -140,7 +140,7 @@ export function ProSettingsPage() {
               <span className="text-slate-400 block text-[10px] uppercase font-semibold">Registered Email</span>
               <span className="font-medium text-slate-800 flex items-center gap-1.5 mt-0.5">
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
-                {user?.email || 'pro@solvebid.demo'}
+                {user?.email || 'Email unavailable'}
               </span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
@@ -445,7 +445,7 @@ export function ProSettingsPage() {
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
             <span className="font-semibold text-slate-800 block">Session Details</span>
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Active in mock contractor mode. Passwords and sensitive credentials are isolated in memory and never stored in plaintext. Logging out revokes your active token and redirects to the sign-in portal.
+              Password changes are handled by your authenticated account. Logging out revokes the active session and redirects to the sign-in portal.
             </p>
           </div>
         </CardContent>

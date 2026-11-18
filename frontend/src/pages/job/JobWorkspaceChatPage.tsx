@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/context/AuthContext';
-import { mockMessageAdapter } from '@/services/mockMessageAdapter';
+import { apiMessageAdapter } from '@/services/http/messageAdapter';
 import type { JobWorkspaceContextType } from '@/layouts/JobWorkspaceLayout';
 import type { ChatMessage } from '@/types/message';
 import {
@@ -55,10 +55,10 @@ export function JobWorkspaceChatPage() {
   const loadMessages = useCallback(async (markRead = true) => {
     if (!job) return;
     try {
-      const data = await mockMessageAdapter.getMessages(job.id, user?.id);
+      const data = await apiMessageAdapter.getMessages(job.id, user?.id);
       setMessages(data);
       if (markRead && user) {
-        await mockMessageAdapter.markAsRead(job.id, user.id);
+        await apiMessageAdapter.markAsRead(job.id, user.id);
       }
     } catch (err) {
       console.error('Failed to load job messages:', err);
@@ -85,7 +85,7 @@ export function JobWorkspaceChatPage() {
   // Access Control (Task G)
   const isParticipant =
     role === 'ADMIN' ||
-    (user && (user.id === job.customerId || user.id === job.professionalId));
+    (user && (user.id === job.customerId || user.id === (job.professionalUserId ?? job.professionalId)));
 
   if (!isParticipant) {
     return (
@@ -119,6 +119,13 @@ export function JobWorkspaceChatPage() {
   const isCurrentViewerCustomer = user?.id === job.customerId || role === 'CUSTOMER';
   const counterpartyName = isCurrentViewerCustomer ? job.professionalName : job.customerName;
   const counterpartyRole = isCurrentViewerCustomer ? 'Assigned Professional' : 'Customer';
+  const isChatClosed = [
+    'COMPLETED',
+    'CUSTOMER_CONFIRMED',
+    'CLOSED',
+    'CANCELLED',
+    'REFUNDED',
+  ].includes(job.status);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMessage(null);
@@ -161,7 +168,7 @@ export function JobWorkspaceChatPage() {
     setErrorMessage(null);
 
     try {
-      const sentMsg = await mockMessageAdapter.sendMessage(
+      const sentMsg = await apiMessageAdapter.sendMessage(
         {
           jobId: job.id,
           content: messageText.trim(),
@@ -192,10 +199,10 @@ export function JobWorkspaceChatPage() {
     setErrorMessage(null);
 
     try {
-      const reply = await mockMessageAdapter.simulateIncomingReply(job.id);
+      const reply = await apiMessageAdapter.simulateIncomingReply(job.id);
       setMessages((prev) => [...prev, reply]);
       if (user) {
-        await mockMessageAdapter.markAsRead(job.id, user.id);
+        await apiMessageAdapter.markAsRead(job.id, user.id);
       }
       setTimeout(() => scrollToBottom('smooth'), 50);
     } catch (err: any) {
@@ -208,7 +215,7 @@ export function JobWorkspaceChatPage() {
 
   const handleRetryMessage = async (messageId: string) => {
     try {
-      const retried = await mockMessageAdapter.retryMessage(messageId);
+      const retried = await apiMessageAdapter.retryMessage(messageId);
       setMessages((prev) => prev.map((m) => (m.id === messageId ? retried : m)));
     } catch (err: any) {
       setErrorMessage('Retry failed.');
@@ -291,7 +298,7 @@ export function JobWorkspaceChatPage() {
         </CardHeader>
 
         {/* Message Stream Container */}
-        <CardContent className="p-0 flex flex-col h-[520px] bg-slate-50/50">
+        <CardContent className="p-0 flex flex-col h-130 bg-slate-50/50">
           {/* Scrollable messages area */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             {isLoading ? (
@@ -396,7 +403,7 @@ export function JobWorkspaceChatPage() {
                         )}
 
                         {/* Message content */}
-                        {msg.content && <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>}
+                        {msg.content && <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">{msg.content}</p>}
 
                         {/* Bubble footer info */}
                         <div
@@ -454,6 +461,15 @@ export function JobWorkspaceChatPage() {
 
           {/* Composer Area */}
           <div className="p-3 sm:p-4 bg-white border-t border-slate-200">
+            {isChatClosed ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-center">
+                <p className="text-xs font-bold text-slate-700">Chat Closed</p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  This conversation is read-only after the job is completed.
+                </p>
+              </div>
+            ) : (
+            <>
             {/* Attachment preview chip before sending */}
             {attachment && (
               <div className="mb-2 flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg max-w-sm">
@@ -527,6 +543,8 @@ export function JobWorkspaceChatPage() {
             <p className="text-[10px] text-slate-400 mt-1 pl-1">
               Press <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-200 rounded font-mono text-[9px]">Enter</kbd> to send, <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-200 rounded font-mono text-[9px]">Shift+Enter</kbd> for newline.
             </p>
+            </>
+            )}
           </div>
         </CardContent>
       </Card>

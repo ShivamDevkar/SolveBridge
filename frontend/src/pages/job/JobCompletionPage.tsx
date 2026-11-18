@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/context/AuthContext';
-import { mockJobAdapter } from '@/services/mockJobAdapter';
+import { apiJobAdapter } from '@/services/http/jobAdapter';
 import type { JobWorkspaceContextType } from '@/layouts/JobWorkspaceLayout';
 import {
   ClipboardCheck,
@@ -38,7 +38,7 @@ export function JobCompletionPage() {
     if (!job?.id) return;
     setIsSubmitting(true);
     try {
-      await mockJobAdapter.confirmJobCompletion(
+      await apiJobAdapter.confirmJobCompletion(
         job.id,
         {
           id: user?.id || 'user-demo-customer',

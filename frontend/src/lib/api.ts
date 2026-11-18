@@ -1,6 +1,9 @@
 import { supabase } from "./supabase";
 
-const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+const apiUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:4000").replace(
+  /\/+$/,
+  "",
+);
 
 export async function apiFetch<T>(
   path: string,
@@ -20,7 +23,11 @@ export async function apiFetch<T>(
     headers.set("Authorization", `Bearer ${session.access_token}`);
   }
 
-  const response = await fetch(`${apiUrl}${path}`, { ...options, headers });
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${apiUrl}${normalizedPath}`, {
+    ...options,
+    headers,
+  });
 
   if (response.status === 204) {
     return undefined as T;

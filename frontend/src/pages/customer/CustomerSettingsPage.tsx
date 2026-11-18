@@ -41,7 +41,7 @@ export function CustomerSettingsPage() {
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  // Mock Notification Preferences
+  // Notification preferences
   const [preferences, setPreferences] = useState({
     proposalAlerts: true,
     jobUpdates: true,
@@ -97,7 +97,7 @@ export function CustomerSettingsPage() {
     setIsLoggingOut(true);
     try {
       await logout();
-      navigate('/login', { replace: true });
+      navigate('/auth/login', { replace: true });
     } catch {
       setIsLoggingOut(false);
     }
@@ -136,7 +136,7 @@ export function CustomerSettingsPage() {
               <span className="text-slate-400 block text-[10px] uppercase font-semibold">Primary Email</span>
               <span className="font-medium text-slate-800 flex items-center gap-1.5 mt-0.5">
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
-                {user?.email || 'customer@solvebid.demo'}
+                {user?.email || 'Email unavailable'}
               </span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">

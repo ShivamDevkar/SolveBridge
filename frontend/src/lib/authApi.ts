@@ -15,5 +15,5 @@ interface CurrentUserResponse {
 }
 
 export function getCurrentUser() {
-  return apiFetch<CurrentUserResponse>("auth/me");
+  return apiFetch<CurrentUserResponse>("/api/v1/auth/me");
 }

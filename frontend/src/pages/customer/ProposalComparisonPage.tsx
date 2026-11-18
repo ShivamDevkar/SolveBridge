@@ -4,8 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { mockProblemAdapter } from '@/services/mockProblemAdapter';
-import { mockProposalAdapter } from '@/services/mockProposalAdapter';
+import { apiProblemAdapter } from '@/services/http/problemAdapter';
+import { apiProposalAdapter } from '@/services/http/proposalAdapter';
 import { mockQuoteRevisionAdapter } from '@/services/mockQuoteRevisionAdapter';
 import { useAuth } from '@/context/AuthContext';
 import type { Problem } from '@/types/problem';
@@ -97,9 +97,9 @@ export function ProposalComparisonPage() {
       if (!problemId) return;
       try {
         const [prob, propsList, jobsList, revsList] = await Promise.all([
-          mockProblemAdapter.getProblemById(problemId),
-          mockProposalAdapter.getProposalsForProblem(problemId),
-          mockProposalAdapter.getJobs(),
+          apiProblemAdapter.getProblemById(problemId),
+          apiProposalAdapter.getProposalsForProblem(problemId),
+          apiProposalAdapter.getJobs(),
           mockQuoteRevisionAdapter.getRevisionsForProblem(problemId),
         ]);
 
@@ -134,11 +134,11 @@ export function ProposalComparisonPage() {
     setIsSubmittingSelection(true);
     try {
       const customer = {
-        id: user?.id || 'user-demo-customer',
-        name: user?.name || 'Customer User',
+        id: user?.id || '',
+        name: user?.name || 'Customer',
       };
 
-      const result = await mockProposalAdapter.selectProposal(
+      const result = await apiProposalAdapter.selectProposal(
         problemId,
         selectedProposalForConfirm.id,
         customer
@@ -149,7 +149,7 @@ export function ProposalComparisonPage() {
       setSelectionSuccessJob(result.job);
 
       // Refresh problem status
-      const updatedProb = await mockProblemAdapter.getProblemById(problemId);
+      const updatedProb = await apiProblemAdapter.getProblemById(problemId);
       if (updatedProb) {
         setProblem(updatedProb);
       }
@@ -199,8 +199,8 @@ export function ProposalComparisonPage() {
           desiredDuration: desiredDuration.trim() || undefined,
         },
         {
-          id: user?.id || 'user-demo-customer',
-          name: user?.name || 'Sarthak Chavan',
+          id: user?.id || '',
+          name: user?.name || 'Customer',
         }
       );
       await loadRevisions();
@@ -217,11 +217,11 @@ export function ProposalComparisonPage() {
     setIsAcceptingRevision(true);
     try {
       const customer = {
-        id: user?.id || 'user-demo-customer',
-        name: user?.name || 'Customer User',
+        id: user?.id || '',
+        name: user?.name || 'Customer',
       };
       await mockQuoteRevisionAdapter.acceptRevisedQuote(rev.id, customer);
-      const result = await mockProposalAdapter.selectProposal(
+      const result = await apiProposalAdapter.selectProposal(
         problemId,
         rev.proposalId,
         customer
@@ -230,7 +230,7 @@ export function ProposalComparisonPage() {
       setAssociatedJob(result.job);
       setSelectionSuccessJob(result.job);
 
-      const updatedProb = await mockProblemAdapter.getProblemById(problemId);
+      const updatedProb = await apiProblemAdapter.getProblemById(problemId);
       if (updatedProb) setProblem(updatedProb);
 
       await loadRevisions();
@@ -246,8 +246,8 @@ export function ProposalComparisonPage() {
     setIsDecliningRevision(true);
     try {
       const customer = {
-        id: user?.id || 'user-demo-customer',
-        name: user?.name || 'Customer User',
+        id: user?.id || '',
+        name: user?.name || 'Customer',
       };
       await mockQuoteRevisionAdapter.declineRevisedQuote(rev.id, customer, declineReason);
       await loadRevisions();
@@ -439,7 +439,7 @@ export function ProposalComparisonPage() {
       {/* 1. SIDE-BY-SIDE COMPARISON MATRIX (Desktop Table) */}
       {proposals.length > 0 && viewMode === 'matrix' && (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-elevated">
-          <table className="w-full border-collapse min-w-[760px]">
+          <table className="w-full border-collapse min-w-190">
             {/* Header / Professional Identity Row */}
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200">

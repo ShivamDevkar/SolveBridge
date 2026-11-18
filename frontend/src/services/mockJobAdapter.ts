@@ -592,6 +592,27 @@ class MockJobAdapter implements IJobService {
     return { ...updated };
   }
 
+  async closeJob(jobId: string, actor: JobActor): Promise<Job> {
+    await delay();
+    const cleanId = jobId.trim().toUpperCase();
+    const existing = this.inMemoryJobs.get(cleanId);
+    if (!existing) {
+      throw new Error(`Job #${cleanId} not found.`);
+    }
+    if (existing.status !== 'CUSTOMER_CONFIRMED') {
+      throw new Error('Customer confirmation is required before closing the job.');
+    }
+    if (actor.role !== 'CUSTOMER' && actor.role !== 'PROFESSIONAL' && actor.role !== 'ADMIN') {
+      throw new Error('Only a job participant can close the job.');
+    }
+
+    const now = new Date().toISOString();
+    const updated: Job = { ...existing, status: 'CLOSED', closedAt: now };
+    this.inMemoryJobs.set(cleanId, updated);
+    this.syncStorage();
+    return { ...updated };
+  }
+
   async getJobActivities(jobId: string): Promise<JobActivityEvent[]> {
     await delay();
     const cleanId = jobId.trim().toUpperCase();

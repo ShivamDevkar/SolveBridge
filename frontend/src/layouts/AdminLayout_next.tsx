@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -8,8 +8,6 @@ import {
   Briefcase,
   ShieldAlert,
   FolderTree,
-  Flag,
-  BarChart3,
   ScrollText,
   Settings,
   Wrench,
@@ -44,7 +42,11 @@ export function AdminLayout() {
     }
   };
 
-  const navItems = [
+  const navItems: Array<{
+    label: string;
+    path: string;
+    icon: ReactNode;
+  }> = [
     {
       label: "Dashboard",
       path: "/admin/dashboard",
@@ -59,7 +61,6 @@ export function AdminLayout() {
       label: "Verification Queue",
       path: "/admin/verification",
       icon: <ShieldCheck className="w-4 h-4" />,
-      alert: "3",
     },
     {
       label: "Problems Oversight",
@@ -75,7 +76,6 @@ export function AdminLayout() {
       label: "Disputes Center",
       path: "/admin/disputes",
       icon: <ShieldAlert className="w-4 h-4" />,
-      alert: "1",
     },
     {
       label: "Categories & Skills",
@@ -87,43 +87,43 @@ export function AdminLayout() {
       path: "/admin/users",
       icon: <Users className="w-4 h-4" />,
     },
-    {
-      label: "Content Reports",
-      path: "/admin/reports",
-      icon: <Flag className="w-4 h-4" />,
-    },
-    {
-      label: "Market Analytics",
-      path: "/admin/analytics",
-      icon: <BarChart3 className="w-4 h-4" />,
-    },
+    // {
+    //   label: "Content Reports",
+    //   path: "/admin/reports",
+    //   icon: <Flag className="w-4 h-4" />,
+    // },
+    // {
+    //   label: "Market Analytics",
+    //   path: "/admin/analytics",
+    //   icon: <BarChart3 className="w-4 h-4" />,
+    // },
     {
       label: "Audit Logs",
       path: "/admin/audit-logs",
       icon: <ScrollText className="w-4 h-4" />,
     },
-    {
-      label: "Platform Settings",
-      path: "/admin/settings",
-      icon: <Settings className="w-4 h-4" />,
-    },
+    // {
+    //   label: "Platform Settings",
+    //   path: "/admin/settings",
+    //   icon: <Settings className="w-4 h-4" />,
+    // },
   ];
 
   const adminMenuItems = [
+    // {
+    //   id: "1",
+    //   label: "Admin Security",
+    //   icon: <Settings className="w-4 h-4" />,
+    //   onClick: () => alert("Admin Security"),
+    // },
     {
       id: "1",
-      label: "Admin Security",
-      icon: <Settings className="w-4 h-4" />,
-      onClick: () => alert("Admin Security"),
-    },
-    {
-      id: "2",
       label: "Customer Portal Preview",
       icon: <ExternalLink className="w-4 h-4" />,
       onClick: () => (window.location.href = "/customer/dashboard"),
     },
     {
-      id: "3",
+      id: "2",
       label: "Sign Out",
       icon: <LogOut className="w-4 h-4" />,
       variant: "danger" as const,
@@ -194,11 +194,7 @@ export function AdminLayout() {
                   </span>
                   <span className="truncate">{item.label}</span>
                 </div>
-                {item.alert && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                    {item.alert}
-                  </span>
-                )}
+                
               </Link>
             );
           })}
@@ -256,9 +252,9 @@ export function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold hidden sm:inline-flex items-center gap-1.5">
+            {/* <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold hidden sm:inline-flex items-center gap-1.5">
               <span>⚠ 3 Pending Verifications</span>
-            </span>
+            </span> */}
             <Link
               to="/admin/audit-logs"
               className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg relative transition-colors focus-visible:ring-2 focus-visible:ring-purple-500"
@@ -284,11 +280,7 @@ export function AdminLayout() {
                   {item.icon}
                   <span>{item.label}</span>
                 </div>
-                {item.alert && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-50 text-amber-800">
-                    {item.alert}
-                  </span>
-                )}
+                
               </Link>
             ))}
 

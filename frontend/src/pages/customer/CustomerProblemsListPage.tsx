@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/context/AuthContext';
-import { mockProblemAdapter } from '@/services/mockProblemAdapter';
+import { apiProblemAdapter } from '@/services/http/problemAdapter';
 import type { Problem, ProblemStatus } from '@/types/problem';
 import {
   PlusCircle,
@@ -42,7 +42,7 @@ export function CustomerProblemsListPage() {
 
     async function fetchProblems() {
       try {
-        const data = await mockProblemAdapter.getProblems(user?.id);
+        const data = await apiProblemAdapter.getProblems(user?.id);
         if (isMounted) {
           setProblems(data);
           setIsLoading(false);

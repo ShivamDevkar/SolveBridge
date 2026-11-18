@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { mockProposalAdapter } from '@/services/mockProposalAdapter';
-import { mockProblemAdapter } from '@/services/mockProblemAdapter';
+import { apiProposalAdapter } from '@/services/http/proposalAdapter';
+import { apiProblemAdapter } from '@/services/http/problemAdapter';
 import { mockQuoteRevisionAdapter } from '@/services/mockQuoteRevisionAdapter';
 import { useAuth } from '@/context/AuthContext';
 import type { Proposal, ProposalStatus } from '@/types/proposal';
@@ -54,10 +54,11 @@ export function MyProposalsPage() {
 
     async function loadData() {
       try {
-        const proId = user?.id || 'user-demo-pro';
+        if (!user?.id) return;
+        const proId = user.id;
         const [propsList, jobsList, revsList] = await Promise.all([
-          mockProposalAdapter.getProposalsByProfessional(proId),
-          mockProposalAdapter.getJobs(),
+          apiProposalAdapter.getProposalsByProfessional(proId),
+          apiProposalAdapter.getJobs(),
           mockQuoteRevisionAdapter.getRevisionsForProfessional(proId),
         ]);
 
@@ -67,7 +68,7 @@ export function MyProposalsPage() {
         // Fetch corresponding problem records
         const combined: ProposalItemWithProblem[] = [];
         for (const prop of propsList) {
-          const problem = await mockProblemAdapter.getProblemById(prop.problemId);
+          const problem = await apiProblemAdapter.getProblemById(prop.problemId);
           const job = jobsList.find((j) => j.proposalId.toUpperCase() === prop.id.toUpperCase());
           combined.push({
             proposal: prop,
@@ -129,14 +130,15 @@ export function MyProposalsPage() {
           explanation: revisedExplanation.trim(),
         },
         {
-          id: user?.id || 'user-demo-pro',
-          name: user?.name || 'Arun Kumar',
+          id: user?.id || '',
+          name: user?.name || 'Professional',
         }
       );
       // Reload proposals and revisions
-      const proId = user?.id || 'user-demo-pro';
+      const proId = user?.id;
+      if (!proId) return;
       const [propsList, revsList] = await Promise.all([
-        mockProposalAdapter.getProposalsByProfessional(proId),
+        apiProposalAdapter.getProposalsByProfessional(proId),
         mockQuoteRevisionAdapter.getRevisionsForProfessional(proId),
       ]);
       setRevisions(revsList);

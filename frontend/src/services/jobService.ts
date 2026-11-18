@@ -71,6 +71,8 @@ export interface IJobService {
     feedbackNote?: string
   ): Promise<Job>;
 
+  closeJob(jobId: string, actor: JobActor): Promise<Job>;
+
   /**
    * Retrieves all activity feed events for a job
    */
