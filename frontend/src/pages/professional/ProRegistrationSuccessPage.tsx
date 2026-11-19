@@ -28,7 +28,7 @@ export function ProRegistrationSuccessPage() {
     <div className="max-w-3xl mx-auto py-6 sm:py-10 px-4 space-y-6">
       {/* 1. Header & Welcome Card */}
       <Card className="bg-white border-slate-200/90 shadow-elevated overflow-hidden">
-        <div className="h-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-blue-600" />
+        <div className="h-2.5 bg-linear-to-r from-amber-500 via-orange-500 to-blue-600" />
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
             <div className="flex items-center gap-2">

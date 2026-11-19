@@ -63,7 +63,38 @@ export function MatchingProblemsPage() {
 
         if (!isMounted) return;
 
-        setProProfile(profile);
+        const currentProfile: MockProfessionalProfile | null =
+          profile ??
+          (user.category || user.skills
+            ? {
+                id: user.id,
+                name: user.name || "Professional",
+                businessName: user.businessName || user.name || "Professional",
+                email: user.email || "",
+                phone: user.phone || "",
+                city: user.city || "",
+                neighborhood: "",
+                category: user.category || "General Services",
+                skills: user.skills || [],
+                coverageRadiusKm: Number(user.coverageRadius) || 15,
+                verified: false,
+                averageRating: 0,
+                completedJobsCount: 0,
+                experienceYears: 0,
+                responseTimeMinutes: 30,
+                bio: "",
+                certifications: [],
+                ratingsBreakdown: {
+                  quality: 0,
+                  professionalism: 0,
+                  punctuality: 0,
+                  value: 0,
+                },
+                sampleReviews: [],
+              }
+            : null);
+
+        setProProfile(currentProfile);
 
         const submittedProblemIds = new Set(proProposals.map((p) => p.problemId.toUpperCase()));
 
@@ -72,8 +103,8 @@ export function MatchingProblemsPage() {
 
         for (const problem of allProblems) {
           const distanceKm = problem.location.distanceKm || 3.5;
-          const matchScore = profile
-            ? matchingService.calculateMatchScore(problem, profile, distanceKm)
+          const matchScore = currentProfile
+            ? matchingService.calculateMatchScore(problem, currentProfile, distanceKm)
             : {
                 overall: 88,
                 skillMatch: 85,

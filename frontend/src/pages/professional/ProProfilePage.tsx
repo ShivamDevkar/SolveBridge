@@ -41,7 +41,7 @@ const RADIUS_OPTIONS = [
 ];
 
 export function ProProfilePage() {
-  const { user, updateUserProfile, isLoading: authLoading } = useAuth();
+  const { user, updateUserProfile, syncApplicationProfile, isLoading: authLoading } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -181,6 +181,21 @@ export function ProProfilePage() {
 
       if (result.error) {
         throw result.error;
+      }
+
+      const syncResult = await syncApplicationProfile({
+        role: 'PROFESSIONAL',
+        firstName: user?.name || formData.businessName.trim(),
+        lastName: 'Professional',
+        businessName: formData.businessName.trim(),
+        phone: formData.phone.trim(),
+        category: formData.category.trim(),
+        skills: formData.skills,
+        coverageRadius: formData.coverageRadius.trim(),
+      });
+
+      if (syncResult.error) {
+        throw syncResult.error;
       }
 
       setSuccessMessage('Professional profile and service settings updated successfully.');

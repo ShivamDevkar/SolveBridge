@@ -762,17 +762,19 @@ async function applyTransition(
   reason?: string,
 ): Promise<JobWithIncludes> {
   const now = new Date();
-  const completionUpdates =
-    newStatus === "COMPLETED"
-      ? { completedAt: now, startedAt: oldStatus === "SCHEDULED" ? now : undefined }
-      : newStatus === "CUSTOMER_CONFIRMED"
-        ? { customerConfirmedAt: now }
-        : newStatus === "CANCELLED"
-          ? { closedAt: now }
-          : {};
+  const lifecycleUpdates =
+    newStatus === "IN_PROGRESS"
+      ? { startedAt: now }
+      : newStatus === "COMPLETED"
+        ? { completedAt: now }
+        : newStatus === "CUSTOMER_CONFIRMED"
+          ? { customerConfirmedAt: now }
+          : newStatus === "CANCELLED"
+            ? { closedAt: now }
+            : {};
 
   return prisma.$transaction(async (tx) => {
-    await tx.job.update({ where: { id: jobId }, data: { status: newStatus, ...completionUpdates } });
+    await tx.job.update({ where: { id: jobId }, data: { status: newStatus, ...lifecycleUpdates } });
 
     await tx.jobStatusHistory.create({
       data: { jobId, oldStatus, newStatus, changedBy: actorId, reason: reason ?? null },

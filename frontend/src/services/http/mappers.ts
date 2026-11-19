@@ -224,6 +224,10 @@ export function mapJob(job: ApiJob, statusHistory?: ApiStatusEvent[]): Job {
     ?.slice()
     .reverse()
     .find((entry) => entry.newStatus === "COMPLETED" && entry.description);
+  const workStartedEvent = statusHistory
+    ?.slice()
+    .reverse()
+    .find((entry) => entry.newStatus === "IN_PROGRESS");
 
   return {
     id: job.id,
@@ -249,7 +253,7 @@ export function mapJob(job: ApiJob, statusHistory?: ApiStatusEvent[]): Job {
           confirmedAt: job.customerConfirmedAt ?? undefined,
         }
       : undefined,
-    startedAt: job.startedAt ?? undefined,
+    startedAt: job.startedAt ?? workStartedEvent?.createdAt ?? undefined,
     completedAt: job.completedAt ?? undefined,
     customerConfirmedAt: job.customerConfirmedAt ?? undefined,
     closedAt: job.closedAt ?? undefined,
